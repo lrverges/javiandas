@@ -1,0 +1,443 @@
+# 🔴 Revisión Adversarial — US-01: Inicio de Sesión
+
+> **Alcance**: Documento de especificación + Implementación completa (backend + frontend)
+> **Fecha**: 2026-05-16
+> **Leyenda de severidad**: 🔴 Crítico · 🟠 Alto · 🟡 Medio · 🟢 Bajo · ⚪ Informativo
+
+---
+
+## Resumen Ejecutivo
+
+US-01 cubre el inicio de sesión de usuario mediante credenciales y Google OAuth. La especificación está **razonablemente estructurada** pero tiene varias **ambigüedades y brechas de seguridad**. La implementación tiene **vulnerabilidades de seguridad críticas** (secretos hardcodeados, fallback de JWT, client IDs expuestos) y se desvía tanto de la especificación como del propio `backend-standards.md` del proyecto de maneras significativas.
+
+| Severidad | Cantidad |
+|-----------|----------|
+| 🔴 Crítico | 5 |
+| 🟠 Alto | 6 |
+| 🟡 Medio | 8 |
+| 🟢 Bajo | 4 |
+| ⚪ Info | 3 |
+
+---
+
+## Parte 1 — Revisión del Documento de Especificación
+
+### 🟠 1.1 Inconsistencia en el formato de respuesta con los estándares del backend
+
+La especificación (§4) define la respuesta de éxito como:
+```json
+{ "success": true, "data": { "token": "...", "user": { ... } } }
+```
+
+Pero el `backend-standards.md` (línea 760-776) establece:
+```json
+{ "success": true, "data": { ... }, "message": "..." }
+```
+
+La implementación no retorna **ninguno de los dos formatos**. Retorna:
+```json
+{ "token": "...", "user": { ... } }
+```
+
+Hay tres contratos en conflicto. La especificación, el documento de estándares y el código real discrepan entre sí.
+
+**Remediación**: Elegir un formato canónico y aplicarlo en todos lados. El formato del documento de estándares (`{ success, data, message }`) debería prevalecer, y la especificación debería actualizarse para coincidir.
+
+---
+
+### 🟡 1.2 Falta el request body para el endpoint de login tradicional
+
+La especificación (§4) documenta el request body para `POST /api/auth/google` pero **omite** el request body para `POST /api/auth/login`. Esto es un contrato de API incompleto.
+
+**Remediación**: Agregar:
+```json
+// POST /api/auth/login
+{ "email": "user@example.com", "password": "••••••••" }
+```
+
+---
+
+### 🟡 1.3 Nombres de campos inconsistentes entre especificación e implementación
+
+La especificación (§4, línea 78) nombra el campo del token de Google como `token`, pero el controller (línea 31) espera `idToken`. El frontend también envía `idToken`. Esto significa que la especificación está equivocada respecto tanto al productor como al consumidor.
+
+**Remediación**: Actualizar la especificación para usar `idToken` de manera consistente, o viceversa. Documentar la decisión.
+
+---
+
+### 🟡 1.4 Falta especificación de respuestas de error
+
+La especificación solo documenta la respuesta de éxito (200 OK). **No hay documentación** para:
+- 400 Bad Request (campos faltantes)
+- 401 Unauthorized (credenciales inválidas)
+- 500 Internal Server Error
+
+Los estándares del backend requieren explícitamente formatos de error consistentes (líneas 778-800).
+
+**Remediación**: Agregar esquemas de respuesta de error para todos los códigos de estado que los endpoints pueden retornar.
+
+---
+
+### 🟡 1.5 Sección de módulos a modificar incompleta
+
+La sección §5 solo menciona `authController.ts` y `authService.ts`. La implementación real requirió **6 archivos adicionales**:
+- `domain/models/User.ts`
+- `domain/repositories/IUserRepository.ts`
+- `infrastructure/repositories/SequelizeUserRepository.ts`
+- `infrastructure/database/models/UserModel.ts`
+- `infrastructure/database/sequelize.ts`
+- `presentation/routes/authRoutes.ts`
+
+**Remediación**: Enumerar todos los archivos que fueron creados o modificados.
+
+---
+
+### 🟢 1.6 Sin mención de la estrategia de hashing de contraseñas
+
+La especificación dice "hash seguro" pero no especifica qué algoritmo ni factor de costo. La implementación usa `bcrypt` con el costo por defecto (10 rondas). Esto debería estar explícitamente documentado.
+
+---
+
+### 🟢 1.7 El checkbox del DoD "Pruebas unitarias y de integración completadas" es vago
+
+No hay mención de umbrales de cobertura. Los estándares del backend requieren **90% de cobertura** (línea 92). El archivo de tests actual solo tiene **3 pruebas unitarias** y **cero pruebas de integración**. El flujo de Google tiene **cero cobertura de tests**.
+
+---
+
+### ⚪ 1.8 Dashboard mencionado pero no definido
+
+La especificación dice "El usuario es redirigido a su dashboard" pero ni la especificación ni el frontend implementan ninguna navegación hacia un dashboard. No hay React Router configurado. El `App.tsx` renderiza `<Login />` incondicionalmente.
+
+---
+
+## Parte 2 — Auditoría de Seguridad
+
+### 🔴 2.1 Secreto JWT de fallback hardcodeado
+
+[authService.ts:25](file:///c:/code/SDD/Node-React-Mysql/javiandas/backend/src/application/services/authService.ts#L25)
+
+```typescript
+process.env.JWT_SECRET || 'secret'
+```
+
+Si `JWT_SECRET` no está configurado en el entorno (y no se encontró ningún archivo `.env`), la aplicación silenciosamente cae al string literal `'secret'`. Un atacante que descubra esto puede forjar tokens JWT arbitrarios, suplantar a cualquier usuario y escalar privilegios.
+
+**Remediación**: Fallar inmediatamente al iniciar si `JWT_SECRET` no está presente:
+```typescript
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('La variable de entorno JWT_SECRET es requerida');
+```
+
+---
+
+### 🔴 2.2 Google Client ID hardcodeado en el código fuente del frontend
+
+[Login.tsx:18](file:///c:/code/SDD/Node-React-Mysql/javiandas/frontend/src/components/Login.tsx#L18)
+
+```typescript
+client_id: '141312238842-qc2cd4ot6vr7c80n5bmvrc8qkdk7cg43.apps.googleusercontent.com',
+```
+
+Aunque un Google Client ID es técnicamente "público", **hardcodearlo directamente en el código fuente** significa:
+- No se puede rotar sin un cambio de código y re-deploy
+- Quedará en el historial de control de versiones para siempre
+- Viola el propio requisito §8 de la especificación: "Las credenciales de Google (Client ID y Secret) deben almacenarse en variables de entorno"
+
+**Remediación**: Usar `import.meta.env.VITE_GOOGLE_CLIENT_ID` con un archivo `.env`.
+
+---
+
+### 🔴 2.3 URL de la API del backend hardcodeada en el frontend
+
+[Login.tsx:31](file:///c:/code/SDD/Node-React-Mysql/javiandas/frontend/src/components/Login.tsx#L31) y [Login.tsx:52](file:///c:/code/SDD/Node-React-Mysql/javiandas/frontend/src/components/Login.tsx#L52)
+
+```typescript
+const res = await fetch('http://localhost:4000/api/auth/google', { ... });
+const res = await fetch('http://localhost:4000/api/auth/login', { ... });
+```
+
+Esto dejará de funcionar en cualquier entorno además de localhost. También impide usar HTTPS.
+
+**Remediación**: Extraer a `import.meta.env.VITE_API_URL`.
+
+---
+
+### 🔴 2.4 Sin rate limiting en los endpoints de autenticación
+
+Ni el endpoint de login ni el de Google tienen ningún middleware de rate limiting. Esto permite:
+- Ataques de **fuerza bruta** contra contraseñas en `/api/auth/login`
+- Ataques de **credential stuffing**
+- **Amplificación de DDoS** a través de la llamada de verificación de token de Google
+
+**Remediación**: Agregar middleware `express-rate-limit` a las rutas de auth (ej. 5 intentos/minuto por IP).
+
+---
+
+### 🔴 2.5 Vulnerabilidad de timing attack en la verificación de credenciales
+
+[authService.ts:13-16](file:///c:/code/SDD/Node-React-Mysql/javiandas/backend/src/application/services/authService.ts#L13-L16)
+
+```typescript
+const user = await this.userRepository.findByEmail(email);
+if (!user || !user.password) {
+    return null;  // Retorno inmediato: sin comparación bcrypt
+}
+```
+
+Cuando un usuario **no existe**, la función retorna inmediatamente. Cuando un usuario **sí existe** pero la contraseña es incorrecta, `bcrypt.compare` se ejecuta (~250ms). Un atacante puede enumerar emails válidos midiendo los tiempos de respuesta.
+
+**Remediación**: Siempre ejecutar bcrypt.compare contra un hash ficticio cuando el usuario no existe:
+```typescript
+const DUMMY_HASH = await bcrypt.hash('dummy', 10);
+if (!user || !user.password) {
+    await bcrypt.compare(password, DUMMY_HASH);
+    return null;
+}
+```
+
+---
+
+### 🟠 2.6 Sin restricción de origen en CORS
+
+[index.ts:14](file:///c:/code/SDD/Node-React-Mysql/javiandas/backend/src/index.ts#L14)
+
+```typescript
+app.use(cors());
+```
+
+Esto permite que **cualquier origen** haga peticiones autenticadas. En producción esto debería estar restringido al dominio del frontend.
+
+**Remediación**: `app.use(cors({ origin: process.env.CORS_ORIGIN }))`.
+
+---
+
+### 🟠 2.7 Sin sanitización ni validación de entradas
+
+El controller hace una verificación básica de nulos (`if (!email || !password)`) pero no hay:
+- Validación del formato de email
+- Validación de longitud/complejidad de contraseña
+- Protección contra SQL injection vía Sequelize (Sequelize parametriza, pero falta defensa en profundidad)
+- Límite de tamaño de request (`express.json()` sin opción `limit`)
+
+La especificación (§3) dice `email: formato de email válido` pero esto no se aplica en ningún lado.
+
+**Remediación**: Usar una librería de validación (ej. `zod` o `class-validator`) como lo exigen los estándares del backend (§ Patrones de Validación, líneas 703-721).
+
+---
+
+### 🟠 2.8 El token JWT no tiene claims de audience ni issuer
+
+[authService.ts:23-27](file:///c:/code/SDD/Node-React-Mysql/javiandas/backend/src/application/services/authService.ts#L23-L27)
+
+```typescript
+jwt.sign(
+    { userId: user.id, email: user.email },
+    process.env.JWT_SECRET || 'secret',
+    { expiresIn: '1h' }
+);
+```
+
+Sin claims `iss` (issuer) ni `aud` (audience). Si el mismo secreto JWT se reutiliza alguna vez entre servicios, los tokens son intercambiables.
+
+**Remediación**: Agregar `issuer` y `audience` a las opciones del JWT.
+
+---
+
+### 🟠 2.9 Sin almacenamiento de token ni gestión de sesión en el frontend
+
+Después de un login exitoso, el frontend hace:
+```typescript
+alert('Login exitoso con Google! Token recibido.');
+console.log('Login success:', data);
+```
+
+El token **nunca se almacena** (ni en `localStorage`, `sessionStorage`, ni cookies). El usuario nunca queda realmente logueado. No hay contexto de autenticación, no hay rutas protegidas, no hay redirección al dashboard.
+
+**Remediación**: Implementar gestión de estado de autenticación apropiada (React Context + `localStorage` o cookie `httpOnly`).
+
+---
+
+## Parte 3 — Violaciones de Arquitectura y Estándares
+
+### 🟠 3.1 Anti-patrón de ORM dual
+
+El proyecto tiene **ambas** implementaciones de repositorio, Sequelize y Prisma:
+- [SequelizeUserRepository.ts](file:///c:/code/SDD/Node-React-Mysql/javiandas/backend/src/infrastructure/repositories/SequelizeUserRepository.ts) (activo)
+- [PrismaUserRepository.ts](file:///c:/code/SDD/Node-React-Mysql/javiandas/backend/src/infrastructure/repositories/PrismaUserRepository.ts) (código muerto)
+
+El `backend-standards.md` referencia explícitamente Prisma como el ORM del proyecto (líneas 83-88), pero la implementación usa Sequelize. El `PrismaUserRepository` importa de `@prisma/client` que no está en `package.json`.
+
+**Remediación**: Elegir un ORM. Eliminar el código muerto. Si se elige Sequelize, actualizar el documento de estándares. Si se elige Prisma, migrar.
+
+---
+
+### 🟠 3.2 `sequelize.sync()` usado en la ruta de producción
+
+[index.ts:27](file:///c:/code/SDD/Node-React-Mysql/javiandas/backend/src/index.ts#L27)
+
+```typescript
+await sequelize.sync();
+```
+
+`sync()` crea/altera tablas automáticamente basándose en las definiciones de los modelos. Esto puede **eliminar datos silenciosamente** en producción si un modelo cambia. La propia documentación de Sequelize advierte contra usar `sync()` en producción.
+
+**Remediación**: Usar migraciones apropiadas.
+
+---
+
+### 🟡 3.3 Violaciones de capas DDD
+
+- El `AuthService` (capa de aplicación) instancia directamente `OAuth2Client` de `google-auth-library`. Las integraciones con APIs externas pertenecen a la **capa de infraestructura**.
+- El archivo de rutas ([authRoutes.ts](file:///c:/code/SDD/Node-React-Mysql/javiandas/backend/src/presentation/routes/authRoutes.ts)) cablea dependencias manualmente (DI manual). El propio comentario lo reconoce: `// en un proyecto real esto iría en un contenedor de DI`.
+
+**Remediación**: Extraer la verificación de Google a un servicio de infraestructura (`GoogleAuthProvider`) detrás de una interfaz. Considerar un contenedor de DI.
+
+---
+
+### 🟡 3.4 Sin infraestructura de logging
+
+El `backend-standards.md` exige una clase `Logger` centralizada (§ Estándares de Logging, líneas 723-736). La implementación usa:
+- `console.log` directamente ([authController.ts:8](file:///c:/code/SDD/Node-React-Mysql/javiandas/backend/src/presentation/controllers/authController.ts#L8))
+- `console.error` directamente ([authController.ts:25](file:///c:/code/SDD/Node-React-Mysql/javiandas/backend/src/presentation/controllers/authController.ts#L25), [authService.ts:74](file:///c:/code/SDD/Node-React-Mysql/javiandas/backend/src/application/services/authService.ts#L74))
+
+---
+
+### 🟡 3.5 Los mensajes de error mezclan español e inglés
+
+El `backend-standards.md` (§ Convenciones de Nombres, líneas 646-656) establece explícitamente: **"Mensajes de error en inglés"**.
+
+Pero el controller retorna:
+- `'Credenciales inválidas'` (línea 19)
+- `'idToken es requerido'` (línea 34)
+- `'Token de Google inválido'` (línea 42)
+- `'Error interno del servidor'` (líneas 26, 48)
+
+Mientras que `message: 'Email and password are required'` (línea 12) está en inglés.
+
+**Remediación**: Estandarizar todos los mensajes de error a inglés.
+
+---
+
+### 🟡 3.6 Sin middleware de errores
+
+El `backend-standards.md` (§ Manejo de Errores, líneas 677-701) exige middleware global de errores con clases de error personalizadas. La implementación usa try/catch ad-hoc en cada método del controller con formas de respuesta inconsistentes.
+
+---
+
+### 🟢 3.7 `createDb.ts` y `seed.ts` sin integración
+
+Estos archivos existen en la raíz de `src` pero no están conectados a ningún script en `package.json`. No hay forma de ejecutarlos.
+
+---
+
+### 🟢 3.8 `PrismaClient` no está en las dependencias
+
+`@prisma/client` se importa en `PrismaUserRepository.ts` pero no está listado en `package.json`. Este archivo fallaría en tiempo de ejecución si se instanciara.
+
+---
+
+## Parte 4 — Brechas de Cobertura de Tests
+
+### 🟡 4.1 El flujo de login con Google tiene CERO cobertura de tests
+
+El archivo de tests ([authService.test.ts](file:///c:/code/SDD/Node-React-Mysql/javiandas/backend/src/application/services/authService.test.ts)) solo prueba el flujo de login tradicional con 3 casos. Hay **cero tests** para:
+- `loginWithGoogle()` — verificación exitosa
+- `loginWithGoogle()` — token inválido
+- `loginWithGoogle()` — auto-registro de nuevo usuario de Google
+- `loginWithGoogle()` — fallo de la API de Google
+
+La especificación (§7) requiere explícitamente: *"Añadir pruebas en authService.test.ts para simular la validación exitosa y fallida del token de Google."*
+
+**Remediación**: Agregar al menos 4 casos de test para el flujo de Google, haciendo mock de `OAuth2Client.verifyIdToken`.
+
+---
+
+### 🟡 4.2 Sin tests del controller
+
+El `AuthController` tiene **cero tests**. Contiene lógica de validación (verificaciones de nulos) y formateo de respuestas que deberían testearse independientemente.
+
+---
+
+### 🟡 4.3 El script de test no funciona
+
+[package.json:8](file:///c:/code/SDD/Node-React-Mysql/javiandas/backend/package.json#L8)
+
+```json
+"test": "echo \"Error: no test specified\" && exit 1"
+```
+
+**No hay configuración de Jest** y el script de test es un placeholder que siempre sale con código de error 1. Los tests existentes (`authService.test.ts`) no pueden ejecutarse realmente.
+
+**Remediación**: Instalar `jest`, `ts-jest` y `@types/jest`. Configurar `jest.config.ts`. Actualizar el script de test.
+
+---
+
+## Parte 5 — Calidad del Frontend
+
+### ⚪ 5.1 Sin React Router para navegación
+
+La especificación (§2, paso 5) dice *"El usuario es redirigido a su dashboard"* pero:
+- `react-router-dom` no está en `package.json`
+- No hay configuración de ruteo
+- `App.tsx` renderiza `<Login />` incondicionalmente
+
+---
+
+### ⚪ 5.2 Tipo global `google` declarado como `any`
+
+[Login.tsx:6](file:///c:/code/SDD/Node-React-Mysql/javiandas/frontend/src/components/Login.tsx#L6)
+
+```typescript
+declare global {
+    const google: any;
+}
+```
+
+Esto anula el propósito de TypeScript. Instalar `@types/google.accounts` o escribir una declaración de tipos mínima.
+
+---
+
+### 🟢 5.3 Referencia obsoleta en el closure de `handleGoogleResponse`
+
+El callback `handleGoogleResponse` se define dentro del componente pero se referencia en un `useEffect` con un array de dependencias vacío. Si esta función alguna vez depende de variables de estado, capturará valores obsoletos. Este es un bug latente.
+
+---
+
+## Tabla Resumen de Prioridades de Remediación
+
+### Inmediato (Bloqueantes pre-release)
+
+| # | Hallazgo | Severidad |
+|---|----------|-----------|
+| 2.1 | Fallback de JWT a `'secret'` | 🔴 |
+| 2.4 | Sin rate limiting en auth | 🔴 |
+| 2.5 | Timing attack para enumeración de usuarios | 🔴 |
+| 2.2 | Google Client ID hardcodeado | 🔴 |
+| 2.3 | URL de API hardcodeada en frontend | 🔴 |
+| 4.3 | Script de test no funcional | 🟡 |
+
+### Corto plazo (Backlog del sprint)
+
+| # | Hallazgo | Severidad |
+|---|----------|-----------|
+| 1.1 | Inconsistencia en formato de respuesta | 🟠 |
+| 2.6 | CORS abierto | 🟠 |
+| 2.7 | Sin validación de entradas | 🟠 |
+| 2.9 | Sin almacenamiento de token ni gestión de sesión | 🟠 |
+| 3.1 | Código muerto de ORM dual | 🟠 |
+| 3.2 | `sequelize.sync()` en producción | 🟠 |
+| 4.1 | Cero cobertura de tests para Google | 🟡 |
+
+### Mediano plazo (Deuda técnica)
+
+| # | Hallazgo | Severidad |
+|---|----------|-----------|
+| 3.3 | Violaciones de capas DDD | 🟡 |
+| 3.4 | Sin infraestructura de logging | 🟡 |
+| 3.5 | Mensajes de error en idioma mixto | 🟡 |
+| 3.6 | Sin middleware de errores | 🟡 |
+| 1.2-1.5 | Brechas en la documentación de la especificación | 🟡 |
+
+---
+
+> **Conclusión**: La implementación cumple con el happy-path básico de la historia de usuario, pero tiene **5 problemas de seguridad críticos** que serían explotables en cualquier entorno que no sea localhost. La especificación y el código discrepan en formatos de respuesta y nombres de campos. La infraestructura de tests no es funcional. La arquitectura se desvía de los propios estándares DDD del proyecto en varias áreas. Se recomienda un sprint enfocado en endurecimiento de seguridad antes de continuar con más funcionalidades.
