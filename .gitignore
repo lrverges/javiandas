@@ -16,4 +16,5 @@ dist-ssr/
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
+
+DIAGNOSTICO_GIT.md
