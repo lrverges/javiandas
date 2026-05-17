@@ -1,0 +1,64 @@
+test_name: Validar autenticación de usuarios
+
+includes:
+  - name: common_headers
+    values:
+      content_type: application/json
+
+stages:
+  - name: Login exitoso tradicional
+    request:
+      url: http://localhost:4000/api/auth/login
+      method: POST
+      headers:
+        Content-Type: application/json
+      json:
+        email: test@test.com
+        password: password123
+    response:
+      status_code: 200
+      verify_response_with:
+        function: tavern.testutils.helpers:validate_pykwalify
+        extra_kwargs:
+          schema:
+            type: map
+            mapping:
+              token:
+                type: str
+                required: true
+              user:
+                type: map
+                mapping:
+                  id:
+                    type: int
+                  email:
+                    type: str
+                  name:
+                    type: str
+
+  - name: Login fallido por credenciales incorrectas
+    request:
+      url: http://localhost:4000/api/auth/login
+      method: POST
+      headers:
+        Content-Type: application/json
+      json:
+        email: test@test.com
+        password: wrong_password
+    response:
+      status_code: 401
+      json:
+        message: "Credenciales inválidas"
+
+  - name: Login fallido por campos faltantes
+    request:
+      url: http://localhost:4000/api/auth/login
+      method: POST
+      headers:
+        Content-Type: application/json
+      json:
+        email: test@test.com
+    response:
+      status_code: 400
+      json:
+        message: "Email and password are required"
