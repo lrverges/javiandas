@@ -2,7 +2,7 @@
 
 Este proyecto contiene el Frontend y Backend para la aplicación de Viandas Saludables (javiandas).
 
-## Requisitos Previos
+## Requisitos Previos 
 
 - **Node.js** (v18 o superior)
 - **pnpm** (recomendado, puedes instalarlo con `npm install -g pnpm`) o **npm**
