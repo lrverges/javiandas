@@ -43,7 +43,7 @@ app.use(errorHandler);
 async function startServer() {
     try {
         if (process.env.NODE_ENV !== 'production') {
-            await sequelize.sync();
+            await sequelize.sync({ alter: true });
             Logger.info('📦 Base de datos sincronizada');
         } else {
             await sequelize.authenticate();
