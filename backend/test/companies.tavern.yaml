@@ -1,0 +1,604 @@
+test_name: Gestion Corporativa B2B de Javiandas (US-02)
+
+includes:
+  - name: common_headers
+    variables:
+      content_type: application/json
+
+stages:
+  # --- AUTENTICACION Y SESION ---
+  - name: Login exitoso como Administrador de Javiandas
+    request:
+      url: http://localhost:4000/api/auth/login
+      method: POST
+      headers:
+        Content-Type: application/json
+      json:
+        email: guest@guest.com
+        password: Pa$$w0rd123
+    response:
+      status_code: 200
+      save:
+        json:
+          admin_token: token
+
+  # --- CREACION DE EMPRESAS (ESCENARIOS POSITIVOS) ---
+  - name: Crear empresa corporativa estandar exitosamente
+    request:
+      url: http://localhost:4000/api/admin/companies
+      method: POST
+      headers:
+        Content-Type: application/json
+      json:
+        name: "ACME Corp Standard"
+        cuit: "30-11223344-5"
+        street: "Avenida Siempreviva"
+        addressNumber: "742"
+        locality: "Springfield"
+        benefitType: "Corporativo"
+        allowExtraAddresses: false
+    response:
+      status_code: 201
+      verify_response_with:
+        function: tavern.helpers:validate_pykwalify
+        extra_kwargs:
+          schema:
+            type: map
+            mapping:
+              success:
+                type: bool
+                required: true
+              message:
+                type: str
+                required: true
+              data:
+                type: map
+                required: true
+                mapping:
+                  id:
+                    type: int
+                    required: true
+                  name:
+                    type: str
+                    required: true
+                  cuit:
+                    type: str
+                    required: true
+                  street:
+                    type: str
+                    required: true
+                  addressNumber:
+                    type: str
+                    required: true
+                  locality:
+                    type: str
+                    required: true
+                  benefitType:
+                    type: str
+                    required: true
+                  allowExtraAddresses:
+                    type: bool
+                    required: true
+                  isActive:
+                    type: bool
+                    required: true
+                  createdAt:
+                    type: str
+                    required: true
+                  updatedAt:
+                    type: str
+                    required: true
+                  admins:
+                    type: seq
+                    required: true
+                    sequence:
+                      - type: any
+                  employees:
+                    type: seq
+                    required: true
+                    sequence:
+                      - type: any
+      save:
+        json:
+          company_id_1: data.id
+
+  - name: Crear empresa corporativa premium exitosamente
+    request:
+      url: http://localhost:4000/api/admin/companies
+      method: POST
+      headers:
+        Content-Type: application/json
+      json:
+        name: "ACME Corp Premium"
+        cuit: "30-55667788-9"
+        street: "Calle Falsa"
+        addressNumber: "123"
+        locality: "Lomas de Zamora"
+        benefitType: "Corporativo Premium"
+        allowExtraAddresses: true
+    response:
+      status_code: 201
+      save:
+        json:
+          company_id_2: data.id
+
+  # --- OBTENER LISTADO Y DETALLE (ESCENARIOS POSITIVOS) ---
+  - name: Listar empresas registradas
+    request:
+      url: http://localhost:4000/api/admin/companies
+      method: GET
+    response:
+      status_code: 200
+      verify_response_with:
+        function: tavern.helpers:validate_pykwalify
+        extra_kwargs:
+          schema:
+            type: map
+            mapping:
+              success:
+                type: bool
+                required: true
+              message:
+                type: str
+                required: true
+              data:
+                type: map
+                required: true
+                mapping:
+                  total:
+                    type: int
+                    required: true
+                  companies:
+                    type: seq
+                    required: true
+                    sequence:
+                      - type: map
+                        mapping:
+                          id:
+                            type: int
+                            required: true
+                          name:
+                            type: str
+                            required: true
+                          cuit:
+                            type: str
+                            required: true
+                          street:
+                            type: str
+                            required: true
+                          addressNumber:
+                            type: str
+                            required: true
+                          locality:
+                            type: str
+                            required: true
+                          benefitType:
+                            type: str
+                            required: true
+                          allowExtraAddresses:
+                            type: bool
+                            required: true
+                          isActive:
+                            type: bool
+                            required: true
+                          createdAt:
+                            type: str
+                            required: true
+                          updatedAt:
+                            type: str
+                            required: true
+                          admins:
+                            type: seq
+                            required: true
+                            sequence:
+                              - type: any
+                          employees:
+                            type: seq
+                            required: true
+                            sequence:
+                              - type: any
+
+  - name: Obtener detalle completo de empresa estandar
+    request:
+      url: http://localhost:4000/api/admin/companies/{company_id_1}
+      method: GET
+    response:
+      status_code: 200
+      verify_response_with:
+        function: tavern.helpers:validate_pykwalify
+        extra_kwargs:
+          schema:
+            type: map
+            mapping:
+              success:
+                type: bool
+                required: true
+              message:
+                type: str
+                required: true
+              data:
+                type: map
+                required: true
+                mapping:
+                  id:
+                    type: int
+                    required: true
+                  name:
+                    type: str
+                    required: true
+                  cuit:
+                    type: str
+                    required: true
+                  street:
+                    type: str
+                    required: true
+                  addressNumber:
+                    type: str
+                    required: true
+                  locality:
+                    type: str
+                    required: true
+                  benefitType:
+                    type: str
+                    required: true
+                  allowExtraAddresses:
+                    type: bool
+                    required: true
+                  isActive:
+                    type: bool
+                    required: true
+                  createdAt:
+                    type: str
+                    required: true
+                  updatedAt:
+                    type: str
+                    required: true
+                  admins:
+                    type: seq
+                    required: true
+                    sequence:
+                      - type: any
+                  employees:
+                    type: seq
+                    required: true
+                    sequence:
+                      - type: any
+
+  # --- EDICION DE EMPRESAS (ESCENARIOS POSITIVOS) ---
+  - name: Editar campos modificables de la empresa estandar
+    request:
+      url: http://localhost:4000/api/admin/companies/{company_id_1}
+      method: PUT
+      headers:
+        Content-Type: application/json
+      json:
+        name: "ACME Corp Standard Modificada"
+        street: "Avenida Siempreviva Nueva"
+        addressNumber: "742B"
+        locality: "Springfield Hills"
+        benefitType: "Corporativo Premium"
+        allowExtraAddresses: true
+    response:
+      status_code: 200
+      verify_response_with:
+        function: tavern.helpers:validate_pykwalify
+        extra_kwargs:
+          schema:
+            type: map
+            mapping:
+              success:
+                type: bool
+                required: true
+              message:
+                type: str
+                required: true
+              data:
+                type: map
+                required: true
+                mapping:
+                  id:
+                    type: int
+                    required: true
+                  name:
+                    type: str
+                    required: true
+                  cuit:
+                    type: str
+                    required: true
+                  street:
+                    type: str
+                    required: true
+                  addressNumber:
+                    type: str
+                    required: true
+                  locality:
+                    type: str
+                    required: true
+                  benefitType:
+                    type: str
+                    required: true
+                  allowExtraAddresses:
+                    type: bool
+                    required: true
+                  isActive:
+                    type: bool
+                    required: true
+                  createdAt:
+                    type: str
+                    required: true
+                  updatedAt:
+                    type: str
+                    required: true
+                  admins:
+                    type: seq
+                    required: true
+                    sequence:
+                      - type: any
+                  employees:
+                    type: seq
+                    required: true
+                    sequence:
+                      - type: any
+
+  # --- ASIGNACION DE ADMINISTRADORES (ESCENARIOS POSITIVOS) ---
+  - name: Asignar administrador por email (usuario no registrado -> pending)
+    request:
+      url: http://localhost:4000/api/admin/companies/{company_id_1}/admins
+      method: POST
+      headers:
+        Content-Type: application/json
+      json:
+        email: "pending-admin@acme.com"
+    response:
+      status_code: 201
+      verify_response_with:
+        function: tavern.helpers:validate_pykwalify
+        extra_kwargs:
+          schema:
+            type: map
+            mapping:
+              success:
+                type: bool
+                required: true
+              message:
+                type: str
+                required: true
+              data:
+                type: map
+                required: true
+                mapping:
+                  id:
+                    type: int
+                    required: true
+                  companyId:
+                    type: int
+                    required: true
+                  userId:
+                    type: any
+                  email:
+                    type: str
+                    required: true
+                  status:
+                    type: str
+                    required: true
+                  createdAt:
+                    type: str
+                    required: true
+                  updatedAt:
+                    type: str
+                    required: true
+      save:
+        json:
+          pending_admin_id: data.id
+
+  - name: Asignar administrador por email (usuario ya registrado -> active)
+    request:
+      url: http://localhost:4000/api/admin/companies/{company_id_1}/admins
+      method: POST
+      headers:
+        Content-Type: application/json
+      json:
+        email: "active-admin@acme.com"
+    response:
+      status_code: 201
+      verify_response_with:
+        function: tavern.helpers:validate_pykwalify
+        extra_kwargs:
+          schema:
+            type: map
+            mapping:
+              success:
+                type: bool
+                required: true
+              message:
+                type: str
+                required: true
+              data:
+                type: map
+                required: true
+                mapping:
+                  id:
+                    type: int
+                    required: true
+                  companyId:
+                    type: int
+                    required: true
+                  userId:
+                    type: any
+                  email:
+                    type: str
+                    required: true
+                  status:
+                    type: str
+                    required: true
+                  createdAt:
+                    type: str
+                    required: true
+                  updatedAt:
+                    type: str
+                    required: true
+      save:
+        json:
+          active_admin_id: data.id
+
+  # --- PRE-ASIGNACION DE EMPLEADOS BATCH (ESCENARIOS POSITIVOS Y REPORTES PARCIALES) ---
+  - name: Cargar lote masivo de emails pre-asignados (exitos y errores mezclados)
+    request:
+      url: http://localhost:4000/api/admin/companies/{company_id_1}/employees/batch
+      method: POST
+      headers:
+        Content-Type: application/json
+      json:
+        emails:
+          - "empleado1@acme.com"
+          - "empleado2@acme.com"
+          - "email-invalido"
+          - "empleado1@acme.com"
+    response:
+      status_code: 200
+      verify_response_with:
+        function: tavern.helpers:validate_pykwalify
+        extra_kwargs:
+          schema:
+            type: map
+            mapping:
+              success:
+                type: bool
+                required: true
+              message:
+                type: str
+                required: true
+              data:
+                type: map
+                required: true
+                mapping:
+                  added:
+                    type: seq
+                    required: true
+                    sequence:
+                      - type: any
+                  errors:
+                    type: seq
+                    required: true
+                    sequence:
+                      - type: any
+                  summary:
+                    type: map
+                    required: true
+                    mapping:
+                      total:
+                        type: int
+                        required: true
+                      successful:
+                        type: int
+                        required: true
+                      failed:
+                        type: int
+                        required: true
+
+  # --- ELIMINAR ADMINISTRADORES Y EMPLEADOS (ESCENARIOS POSITIVOS) ---
+  - name: Eliminar administrador pre-asignado pendiente
+    request:
+      url: http://localhost:4000/api/admin/companies/{company_id_1}/admins/{pending_admin_id}
+      method: DELETE
+    response:
+      status_code: 200
+      json:
+        success: true
+        message: "Administrador removido exitosamente"
+        data: null
+
+  # --- VALIDACIONES Y ERRORES (ESCENARIOS NEGATIVOS) ---
+  - name: Intentar crear empresa con CUIT duplicado
+    request:
+      url: http://localhost:4000/api/admin/companies
+      method: POST
+      headers:
+        Content-Type: application/json
+      json:
+        name: "ACME Duplicada"
+        cuit: "30-55667788-9"  # CUIT de la premium ya creada
+        street: "Calle Falsa"
+        addressNumber: "123"
+        locality: "Lomas"
+        benefitType: "Corporativo"
+        allowExtraAddresses: false
+    response:
+      status_code: 409
+      json:
+        success: false
+        message: "Ya existe una empresa con el CUIT 30-55667788-9"
+        data: null
+
+  - name: Intentar crear empresa con CUIT invalido
+    request:
+      url: http://localhost:4000/api/admin/companies
+      method: POST
+      headers:
+        Content-Type: application/json
+      json:
+        name: "ACME Invalida"
+        cuit: "30112233445"  # Sin guiones
+        street: "Calle"
+        addressNumber: "123"
+        locality: "Lomas"
+        benefitType: "Corporativo"
+        allowExtraAddresses: false
+    response:
+      status_code: 400
+      json:
+        success: false
+        message: "CUIT inválido. Debe ser XX-XXXXXXXX-X"
+        data: null
+
+  - name: Intentar asignar administrador con email invalido
+    request:
+      url: http://localhost:4000/api/admin/companies/{company_id_1}/admins
+      method: POST
+      headers:
+        Content-Type: application/json
+      json:
+        email: "cuit-invalido-sin-arroba"
+    response:
+      status_code: 400
+      json:
+        success: false
+        message: "Formato de email inválido"
+        data: null
+
+  # --- ESCENARIOS NEGATIVOS DE ELIMINACION ---
+  - name: Intentar eliminar administrador inexistente
+    request:
+      url: http://localhost:4000/api/admin/companies/{company_id_1}/admins/99999
+      method: DELETE
+    response:
+      status_code: 404
+      json:
+        success: false
+        message: "Administrador no encontrado"
+        data: null
+
+  - name: Intentar eliminar empleado inexistente
+    request:
+      url: http://localhost:4000/api/admin/companies/{company_id_1}/employees/99999
+      method: DELETE
+    response:
+      status_code: 404
+      json:
+        success: false
+        message: "Empleado no encontrado"
+        data: null
+
+  # --- ESCENARIOS DE AUTORIZACION ---
+  - name: Intentar acceder a empresas sin cookie de autenticacion
+    request:
+      url: http://localhost:4000/api/admin/companies
+      method: GET
+      headers:
+        Cookie: ""  # Sin token
+    response:
+      status_code: 401
+      json:
+        success: false
+        message: "Not authenticated"
+        data: null

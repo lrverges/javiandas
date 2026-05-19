@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Login.css';
-import logo from '../assets/logoviandas3.png';
+import logo from '../assets/Logo JA VIANDAS_SF.png';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -91,61 +91,65 @@ export default function Login() {
 
     return (
         <div className="login-container">
-            <div className="login-box">
-                <div className="logo-container">
-                    <img src={logo} alt="Logo Viandas Saludables" className="app-logo" />
+            <div className="login-left-panel">
+                <div className="brand-content">
+                    <img src={logo} alt="Logo Viandas Saludables" className="big-logo" />
                 </div>
-                <h2>Iniciar Sesión</h2>
-                <p className="subtitle">Bienvenido de nuevo</p>
-                
-                <form onSubmit={handleTraditionalLogin}>
-                    <div className="form-group">
-                        <label>Correo Electrónico</label>
-                        <input 
-                            type="email" 
-                            placeholder="tu@email.com"
-                            value={email} 
-                            onChange={(e) => setEmail(e.target.value)} 
-                            required 
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Contraseña</label>
-                        <input 
-                            type="password" 
-                            placeholder="••••••••"
-                            value={password} 
-                            onChange={(e) => setPassword(e.target.value)} 
-                            required 
-                        />
+            </div>
+            <div className="login-right-panel">
+                <div className="login-box">
+                    <h2>Iniciar Sesión</h2>
+                    <p className="subtitle">Bienvenido de nuevo</p>
+                    
+                    <form onSubmit={handleTraditionalLogin}>
+                        <div className="form-group">
+                            <label>Correo Electrónico</label>
+                            <input 
+                                type="email" 
+                                placeholder="tu@email.com"
+                                value={email} 
+                                onChange={(e) => setEmail(e.target.value)} 
+                                required 
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Contraseña</label>
+                            <input 
+                                type="password" 
+                                placeholder="••••••••"
+                                value={password} 
+                                onChange={(e) => setPassword(e.target.value)} 
+                                required 
+                            />
+                        </div>
+                        
+                        {error && <div className="error-alert">{error}</div>}
+                        {info && <div className="info-alert">{info}</div>}
+                        
+                        <button type="submit" className="login-submit-btn">
+                            Entrar
+                        </button>
+                    </form>
+                    
+                    <div className="divider">
+                        <span>o</span>
                     </div>
                     
-                    {error && <div className="error-alert">{error}</div>}
-                    {info && <div className="info-alert">{info}</div>}
+                    <div id="google-btn" className="google-btn-container"></div>
                     
-                    <button type="submit" className="login-submit-btn">
-                        Entrar
-                    </button>
-                </form>
-                
-                <div className="divider">
-                    <span>o</span>
+                    <p className="footer-text">
+                        ¿No tienes cuenta?{' '}
+                        <span 
+                            className="link" 
+                            onClick={() => {
+                                setError('');
+                                setInfo('¡Próximamente! El registro con contraseña estará disponible en la US-02. Por ahora, inicia sesión con las credenciales de prueba o Google.');
+                            }}
+                        >
+                            Regístrate
+                        </span>
+                    </p>
                 </div>
-                
-                <div id="google-btn" className="google-btn-container"></div>
-                
-                <p className="footer-text">
-                    ¿No tienes cuenta?{' '}
-                    <span 
-                        className="link" 
-                        onClick={() => {
-                            setError('');
-                            setInfo('¡Próximamente! El registro con contraseña estará disponible en la US-02. Por ahora, inicia sesión con las credenciales de prueba o Google.');
-                        }}
-                    >
-                        Regístrate
-                    </span>
-                </p>
             </div>
         </div>
     );

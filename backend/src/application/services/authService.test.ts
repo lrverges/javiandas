@@ -17,6 +17,7 @@ describe('AuthService', () => {
         mockUserRepository = {
             findByEmail: jest.fn(),
             create: jest.fn(),
+            update: jest.fn(),
         };
         mockGoogleProvider = {
             verifyIdToken: jest.fn(),

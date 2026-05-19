@@ -1,22 +1,27 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --text: #1e293b;
+  --text-h: #0f172a;
+  --bg: #f8fafc;
+  --card-bg: #e2e8f0;
+  --border: #cbd5e1;
+  --code-bg: #f1f5f9;
+  --accent: #db2777;
+  --accent-bg: rgba(219, 39, 119, 0.08);
+  --accent-border: rgba(219, 39, 119, 0.25);
+  --social-bg: rgba(241, 245, 249, 0.5);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  --trigger-bg: rgba(15, 23, 42, 0.04);
+  --trigger-hover-bg: rgba(15, 23, 42, 0.08);
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --brand-title-color: #0f172a;
+  --brand-sub-color: #db2777;
+
+  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --heading: 'Inter', system-ui, -apple-system, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
+  font: 16px/145% var(--sans);
+  letter-spacing: 0.1px;
   color-scheme: light dark;
   color: var(--text);
   background: var(--bg);
@@ -26,36 +31,35 @@
   -moz-osx-font-smoothing: grayscale;
 
   @media (max-width: 1024px) {
-    font-size: 16px;
+    font-size: 15px;
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+html.dark {
+  --text: #94a3b8;
+  --text-h: #f8fafc;
+  --bg: #0f172a;
+  --card-bg: #1e293b;
+  --border: #334155;
+  --code-bg: #1e293d;
+  --accent: #10b981;
+  --accent-bg: rgba(16, 185, 129, 0.15);
+  --accent-border: rgba(16, 185, 129, 0.4);
+  --social-bg: rgba(47, 48, 58, 0.5);
+  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  --trigger-bg: rgba(255, 255, 255, 0.03);
+  --trigger-hover-bg: rgba(255, 255, 255, 0.07);
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+  --brand-title-color: #ffffff;
+  --brand-sub-color: #22c55e;
+}
+
+html.dark #social .button-icon {
+  filter: invert(1) brightness(2);
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
+  width: 100%;
   min-height: 100svh;
   display: flex;
   flex-direction: column;

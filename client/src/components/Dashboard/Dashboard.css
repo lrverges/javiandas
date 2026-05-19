@@ -1,4 +1,4 @@
-:root {
+.dashboard-container {
   --bg-color: #0f172a;
   --card-bg: #1e293b;
   --text-primary: #f8fafc;
@@ -8,9 +8,7 @@
   --error-red: #ef4444;
   --error-hover: #dc2626;
   --border-color: #334155;
-}
 
-.dashboard-container {
   padding: 2rem;
   max-width: 800px;
   margin: 0 auto;
@@ -27,8 +25,8 @@
   padding-bottom: 1rem;
 }
 
-.dashboard-header h1 {
-  margin: 0;
+.dashboard-content h1 {
+  margin: 0 0 1.5rem 0;
   font-size: 28px;
   font-weight: 700;
   background: linear-gradient(135deg, #fff 0%, var(--primary-green) 100%);

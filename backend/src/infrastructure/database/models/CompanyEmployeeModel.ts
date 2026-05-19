@@ -1,45 +1,40 @@
 import { DataTypes, Model } from 'sequelize';
 import { sequelize } from '../sequelize';
 
-export class UserModel extends Model {
+export class CompanyEmployeeModel extends Model {
     declare id: number;
+    declare companyId: number;
     declare email: string;
-    declare name: string;
-    declare password: string | null;
-    declare role: string;
-    declare companyId: number | null;
+    declare userId: number | null;
+    declare status: 'pending' | 'registered';
 }
 
-UserModel.init({
+CompanyEmployeeModel.init({
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
+    },
+    companyId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
     },
     email: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
     },
-    name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
-    password: {
-        type: DataTypes.STRING,
-        allowNull: true,
-    },
-    role: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        defaultValue: 'user',
-    },
-    companyId: {
+    userId: {
         type: DataTypes.INTEGER,
         allowNull: true,
     },
+    status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'pending',
+    }
 }, {
     sequelize,
-    tableName: 'users',
+    tableName: 'company_employees',
     timestamps: true,
 });

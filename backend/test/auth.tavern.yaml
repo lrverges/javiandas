@@ -2,7 +2,7 @@ test_name: Validar autenticación de usuarios
 
 includes:
   - name: common_headers
-    values:
+    variables:
       content_type: application/json
 
 stages:
@@ -13,28 +13,42 @@ stages:
       headers:
         Content-Type: application/json
       json:
-        email: test@test.com
-        password: password123
+        email: guest@guest.com
+        password: Pa$$w0rd123
     response:
       status_code: 200
       verify_response_with:
-        function: tavern.testutils.helpers:validate_pykwalify
+        function: tavern.helpers:validate_pykwalify
         extra_kwargs:
           schema:
             type: map
             mapping:
-              token:
+              success:
+                type: bool
+                required: true
+              message:
                 type: str
                 required: true
-              user:
+              data:
                 type: map
+                required: true
                 mapping:
-                  id:
-                    type: int
-                  email:
-                    type: str
-                  name:
-                    type: str
+                  user:
+                    type: map
+                    required: true
+                    mapping:
+                      id:
+                        type: int
+                        required: true
+                      email:
+                        type: str
+                        required: true
+                      name:
+                        type: str
+                        required: true
+                      role:
+                        type: str
+                        required: true
 
   - name: Login fallido por credenciales incorrectas
     request:
@@ -48,7 +62,9 @@ stages:
     response:
       status_code: 401
       json:
-        message: "Credenciales inválidas"
+        success: false
+        message: "Invalid credentials"
+        data: null
 
   - name: Login fallido por campos faltantes
     request:
@@ -61,4 +77,6 @@ stages:
     response:
       status_code: 400
       json:
-        message: "Email and password are required"
+        success: false
+        message: "Invalid input: expected string, received undefined"
+        data: null
