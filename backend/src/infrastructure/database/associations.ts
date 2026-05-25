@@ -2,6 +2,8 @@ import { CompanyModel } from './models/CompanyModel';
 import { CompanyAdminModel } from './models/CompanyAdminModel';
 import { CompanyEmployeeModel } from './models/CompanyEmployeeModel';
 import { UserModel } from './models/UserModel';
+import { AddressModel } from './models/AddressModel';
+import { EmailVerificationModel } from './models/EmailVerificationModel';
 
 export function setupAssociations() {
     // Company - CompanyAdmin
@@ -23,4 +25,8 @@ export function setupAssociations() {
     // CompanyEmployee - User
     CompanyEmployeeModel.belongsTo(UserModel, { foreignKey: 'userId', as: 'user', onDelete: 'SET NULL' });
     UserModel.hasOne(CompanyEmployeeModel, { foreignKey: 'userId', as: 'employeeAssignment' });
+
+    // User - Address
+    UserModel.hasMany(AddressModel, { foreignKey: 'userId', as: 'addresses', onDelete: 'CASCADE' });
+    AddressModel.belongsTo(UserModel, { foreignKey: 'userId', as: 'user' });
 }

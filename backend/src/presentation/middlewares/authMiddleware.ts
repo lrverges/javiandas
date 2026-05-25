@@ -29,6 +29,11 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
             email: user.email,
             name: user.name,
             role: user.role || 'user',
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            dni: user.dni,
+            companyId: user.companyId
         };
         next();
     } catch (error) {

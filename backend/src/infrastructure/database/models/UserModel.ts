@@ -8,6 +8,11 @@ export class UserModel extends Model {
     declare password: string | null;
     declare role: string;
     declare companyId: number | null;
+    declare firstName: string;
+    declare lastName: string;
+    declare phone: string;
+    declare dni: string;
+    declare isVerified: boolean;
 }
 
 UserModel.init({
@@ -37,6 +42,28 @@ UserModel.init({
     companyId: {
         type: DataTypes.INTEGER,
         allowNull: true,
+    },
+    firstName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    lastName: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    phone: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    dni: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true,
+    },
+    isVerified: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
     },
 }, {
     sequelize,

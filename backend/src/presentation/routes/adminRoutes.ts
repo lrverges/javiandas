@@ -8,7 +8,7 @@ import { SequelizeCompanyAdminRepository } from '../../infrastructure/repositori
 import { SequelizeCompanyEmployeeRepository } from '../../infrastructure/repositories/SequelizeCompanyEmployeeRepository';
 import { SequelizeUserRepository } from '../../infrastructure/repositories/SequelizeUserRepository';
 import { requireAuth } from '../middlewares/authMiddleware';
-import { requireRole } from '../middlewares/requireRole';
+import { requireRole, requireCompanyAccess } from '../middlewares/requireRole';
 import rateLimit from 'express-rate-limit';
 
 const router = Router();
@@ -38,23 +38,23 @@ const companyEmployeeService = new CompanyEmployeeService(companyEmployeeRepo, c
 
 const controller = new CompanyController(companyService, companyAdminService, companyEmployeeService);
 
-// Middleware de Autenticación y Autorización Global de Admin Javiandas
+// Middleware de Autenticación y Limiter Global
 router.use(requireAuth);
-router.use(requireRole('admin_javiandas'));
 router.use(adminLimiter);
 
 // --- Endpoints de Empresas ---
-router.post('/companies', (req, res, next) => controller.createCompany(req, res, next));
-router.get('/companies', (req, res, next) => controller.listCompanies(req, res, next));
-router.get('/companies/:id', (req, res, next) => controller.getCompanyDetail(req, res, next));
-router.put('/companies/:id', (req, res, next) => controller.updateCompany(req, res, next));
+router.post('/companies', requireRole('admin_javiandas'), (req, res, next) => controller.createCompany(req, res, next));
+router.get('/companies', requireRole('admin_javiandas'), (req, res, next) => controller.listCompanies(req, res, next));
+router.get('/companies/:id', requireCompanyAccess, (req, res, next) => controller.getCompanyDetail(req, res, next));
+router.put('/companies/:id', requireRole('admin_javiandas'), (req, res, next) => controller.updateCompany(req, res, next));
 
 // --- Endpoints de Delegación de Administradores ---
-router.post('/companies/:id/admins', (req, res, next) => controller.assignAdmin(req, res, next));
-router.delete('/companies/:id/admins/:adminId', (req, res, next) => controller.removeAdmin(req, res, next));
+router.post('/companies/:id/admins', requireCompanyAccess, (req, res, next) => controller.assignAdmin(req, res, next));
+router.delete('/companies/:id/admins/:adminId', requireCompanyAccess, (req, res, next) => controller.removeAdmin(req, res, next));
 
 // --- Endpoints de Empleados ---
-router.post('/companies/:id/employees/batch', (req, res, next) => controller.batchEmployees(req, res, next));
-router.delete('/companies/:id/employees/:employeeId', (req, res, next) => controller.removeEmployee(req, res, next));
+router.post('/companies/:id/employees/batch', requireCompanyAccess, (req, res, next) => controller.batchEmployees(req, res, next));
+router.delete('/companies/:id/employees/:employeeId', requireCompanyAccess, (req, res, next) => controller.removeEmployee(req, res, next));
 
 export default router;
+

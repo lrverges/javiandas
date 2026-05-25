@@ -1,7 +1,8 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login';
+import Register from './components/Register';
 import Dashboard from './components/Dashboard/Dashboard';
 import AdminCompanyList from './components/Admin/AdminCompanyList';
 import AdminCompanyDetail from './components/Admin/AdminCompanyDetail';
@@ -36,12 +37,36 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
+const AdminOrCompanyAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isLoading } = useAuth();
+  const { id } = useParams<{ id: string }>();
+
+  if (isLoading) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Cargando...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role === 'admin_javiandas') {
+    return <>{children}</>;
+  }
+
+  if (user.role === 'admin_empresa' && user.companyId === Number(id)) {
+    return <>{children}</>;
+  }
+
+  return <Navigate to="/dashboard" replace />;
+};
+
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           
           {/* Rutas Protegidas envueltas en MainLayout */}
           <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
@@ -57,9 +82,9 @@ function App() {
             <Route 
               path="/admin/companies/:id" 
               element={
-                <AdminRoute>
+                <AdminOrCompanyAdminRoute>
                   <AdminCompanyDetail />
-                </AdminRoute>
+                </AdminOrCompanyAdminRoute>
               } 
             />
           </Route>

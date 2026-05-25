@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import logo from '../../assets/Logo JA VIANDAS_SF.png';
+import './AdminCompanyDetail.css';
 import './AdminCompanyDetail.css';
 
 interface CompanyAdmin {
@@ -40,7 +40,7 @@ interface BatchResult {
 
 export default function AdminCompanyDetail() {
     const { id } = useParams<{ id: string }>();
-    const { logout } = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
 
     const [company, setCompany] = useState<CompanyDetail | null>(null);
@@ -254,9 +254,11 @@ export default function AdminCompanyDetail() {
         return (
             <div className="admin-layout">
                 <main className="admin-main">
-                    <button onClick={() => navigate('/admin/companies')} className="btn-secondary" style={{ marginBottom: '24px' }}>
-                        &larr; Volver al Listado
-                    </button>
+                    {user?.role === 'admin_javiandas' && (
+                        <button onClick={() => navigate('/admin/companies')} className="btn-secondary" style={{ marginBottom: '24px' }}>
+                            &larr; Volver al Listado
+                        </button>
+                    )}
                     <div className="error-banner">{error || 'No se pudo cargar la empresa'}</div>
                 </main>
             </div>
@@ -266,9 +268,11 @@ export default function AdminCompanyDetail() {
     return (
         <div className="admin-layout">
             <main className="admin-main">
-                <button onClick={() => navigate('/admin/companies')} className="btn-back">
-                    &larr; Volver al Listado
-                </button>
+                {user?.role === 'admin_javiandas' && (
+                    <button onClick={() => navigate('/admin/companies')} className="btn-back">
+                        &larr; Volver al Listado
+                    </button>
+                )}
 
                 <div className="detail-hero-card">
                     <div className="hero-header">

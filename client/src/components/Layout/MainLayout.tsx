@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import logo from '../../assets/Logo JA VIANDAS_SF.png';
@@ -118,7 +118,7 @@ export default function MainLayout() {
                                 <div className="dropdown-user-info">
                                     <p className="dropdown-name">{user?.name}</p>
                                     <p className="dropdown-email">{user?.email}</p>
-                                    <span className="dropdown-role">{user?.role === 'admin_javiandas' ? 'Super Admin' : 'Usuario'}</span>
+                                    <span className="dropdown-role">{user?.role === 'admin_javiandas' ? 'Super Admin' : user?.role === 'admin_empresa' ? 'Admin Empresa' : 'Usuario'}</span>
                                 </div>
                                 <div className="dropdown-divider"></div>
                                 <button onClick={handleLogout} className="dropdown-item logout-item">
@@ -160,6 +160,22 @@ export default function MainLayout() {
                                     <path d="M13 15H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                                 </svg>
                                 <span>Administración B2B</span>
+                            </button>
+                        )}
+                        {user?.role === 'admin_empresa' && user.companyId && (
+                            <button 
+                                className={`nav-item ${currentPath.startsWith('/admin') ? 'active' : ''}`}
+                                onClick={() => navigate(`/admin/companies/${user.companyId}`)}
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="nav-icon">
+                                    <path d="M3 21H21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                    <path d="M5 21V7L12 3L19 7V21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M9 11H11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                    <path d="M9 15H11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                    <path d="M13 11H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                    <path d="M13 15H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                </svg>
+                                <span>Administrar Usuarios</span>
                             </button>
                         )}
                     </nav>

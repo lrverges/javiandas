@@ -15,6 +15,10 @@ describe('AuthController', () => {
         mockAuthService = {
             login: jest.fn(),
             loginWithGoogle: jest.fn(),
+            sendOtp: jest.fn(),
+            verifyOtp: jest.fn(),
+            resendOtp: jest.fn(),
+            register: jest.fn(),
         } as any;
 
         authController = new AuthController(mockAuthService);
@@ -171,6 +175,69 @@ describe('AuthController', () => {
                 success: true,
                 message: 'User retrieved successfully',
                 data: { user: mockUser }
+            });
+        });
+    });
+
+    describe('Send OTP Handler', () => {
+        it('should return 400 on invalid email validation', async () => {
+            mockRequest.body = { email: 'invalid-email' };
+            await authController.sendOtp(mockRequest as Request, mockResponse as Response, nextFunction);
+            expect(mockResponse.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should return 400 if service throws error (e.g. already registered)', async () => {
+            mockRequest.body = { email: 'registered@test.com' };
+            mockAuthService.sendOtp.mockRejectedValue(new Error('Email is already registered'));
+            await authController.sendOtp(mockRequest as Request, mockResponse as Response, nextFunction);
+            expect(mockResponse.status).toHaveBeenCalledWith(400);
+            expect(mockResponse.json).toHaveBeenCalledWith(expect.objectContaining({
+                message: 'Email is already registered'
+            }));
+        });
+
+        it('should return 200 on success', async () => {
+            mockRequest.body = { email: 'new@test.com' };
+            mockAuthService.sendOtp.mockResolvedValue();
+            await authController.sendOtp(mockRequest as Request, mockResponse as Response, nextFunction);
+            expect(mockResponse.json).toHaveBeenCalledWith({
+                success: true,
+                message: 'OTP sent successfully',
+                data: null
+            });
+        });
+    });
+
+    describe('Register Handler', () => {
+        it('should return 400 on Zod validation failure', async () => {
+            mockRequest.body = { email: 'test@test.com' }; // missing other fields
+            await authController.register(mockRequest as Request, mockResponse as Response, nextFunction);
+            expect(mockResponse.status).toHaveBeenCalledWith(400);
+        });
+
+        it('should register successfully, set cookie and return 201', async () => {
+            mockRequest.body = {
+                email: 'new@test.com',
+                password: 'password123',
+                firstName: 'John',
+                lastName: 'Doe',
+                phone: '11223344',
+                dni: '12345678',
+                address: { street: 'Main St', number: '123', locality: 'City' }
+            };
+            mockAuthService.register.mockResolvedValue({
+                message: 'Registration successful',
+                token: 'mock-jwt-token',
+                user: { id: 10, email: 'new@test.com', name: 'John Doe', role: 'user' }
+            } as any);
+
+            await authController.register(mockRequest as Request, mockResponse as Response, nextFunction);
+            expect(mockResponse.status).toHaveBeenCalledWith(201);
+            expect(mockResponse.cookie).toHaveBeenCalledWith('token', 'mock-jwt-token', expect.any(Object));
+            expect(mockResponse.json).toHaveBeenCalledWith({
+                success: true,
+                message: 'Registration successful',
+                data: { user: expect.any(Object) }
             });
         });
     });

@@ -64,6 +64,13 @@ export class SequelizeCompanyEmployeeRepository implements ICompanyEmployeeRepos
         return this.mapToDomain(found);
     }
 
+    async update(id: number, employee: Partial<CompanyEmployee>, options?: { transaction?: any }): Promise<CompanyEmployee | null> {
+        const found = await CompanyEmployeeModel.findByPk(id, options);
+        if (!found) return null;
+        await found.update(employee, options);
+        return this.mapToDomain(found);
+    }
+
     private mapToDomain(model: CompanyEmployeeModel): CompanyEmployee {
         return new CompanyEmployee({
             id: model.id,

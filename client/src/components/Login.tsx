@@ -82,6 +82,10 @@ export default function Login() {
                 login(data.data.user);
                 navigate('/dashboard');
             } else {
+                if (res.status === 403 && data.message === 'Email is not verified') {
+                    navigate('/verify-email', { state: { email } });
+                    return;
+                }
                 setError(data.message || 'Credenciales inválidas');
             }
         } catch (err) {
@@ -141,10 +145,7 @@ export default function Login() {
                         ¿No tienes cuenta?{' '}
                         <span 
                             className="link" 
-                            onClick={() => {
-                                setError('');
-                                setInfo('¡Próximamente! El registro con contraseña estará disponible en la US-02. Por ahora, inicia sesión con las credenciales de prueba o Google.');
-                            }}
+                            onClick={() => navigate('/register')}
                         >
                             Regístrate
                         </span>

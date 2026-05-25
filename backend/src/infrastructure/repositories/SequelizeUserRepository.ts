@@ -13,6 +13,11 @@ export class SequelizeUserRepository implements IUserRepository {
             password: user.password || undefined,
             role: user.role,
             companyId: user.companyId,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            dni: user.dni,
+            isVerified: user.isVerified,
         });
     }
 
@@ -23,14 +28,24 @@ export class SequelizeUserRepository implements IUserRepository {
             password: user.password,
             role: user.role || 'user',
             companyId: user.companyId || null,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            dni: user.dni,
+            isVerified: user.isVerified !== undefined ? user.isVerified : false,
         }, options);
         return new User({
             id: createdUser.id,
             email: createdUser.email,
             name: createdUser.name,
-            password: createdUser.password || undefined,
+            password: createdUser.password,
             role: createdUser.role,
             companyId: createdUser.companyId,
+            firstName: createdUser.firstName,
+            lastName: createdUser.lastName,
+            phone: createdUser.phone,
+            dni: createdUser.dni,
+            isVerified: createdUser.isVerified
         });
     }
 
@@ -42,9 +57,14 @@ export class SequelizeUserRepository implements IUserRepository {
             id: found.id,
             email: found.email,
             name: found.name,
-            password: found.password || undefined,
+            password: found.password,
             role: found.role,
             companyId: found.companyId,
+            firstName: found.firstName,
+            lastName: found.lastName,
+            phone: found.phone,
+            dni: found.dni,
+            isVerified: found.isVerified
         });
     }
 }

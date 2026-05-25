@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import AdminCompanyForm from './AdminCompanyForm';
-import logo from '../../assets/Logo JA VIANDAS_SF.png';
+import './AdminCompanyList.css';
 import './AdminCompanyList.css';
 
 interface Company {
@@ -20,7 +19,6 @@ interface Company {
 }
 
 export default function AdminCompanyList() {
-    const { logout } = useAuth();
     const navigate = useNavigate();
     const [companies, setCompanies] = useState<Company[]>([]);
     const [total, setTotal] = useState(0);
@@ -201,7 +199,7 @@ export default function AdminCompanyList() {
                                                     onClick={(e) => { e.stopPropagation(); navigate(`/admin/companies/${company.id}`); }}
                                                     className="btn-accent"
                                                 >
-                                                    Detalle
+                                                    Editar usuarios
                                                 </button>
                                             </div>
                                         </td>

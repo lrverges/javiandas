@@ -6,6 +6,11 @@ declare global {
                 email: string;
                 name: string;
                 role: string;
+                firstName?: string;
+                lastName?: string;
+                phone?: string;
+                dni?: string;
+                companyId?: number | null;
             };
         }
     }

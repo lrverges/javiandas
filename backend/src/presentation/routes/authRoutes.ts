@@ -3,6 +3,10 @@ import rateLimit from 'express-rate-limit';
 import { AuthController } from '../controllers/authController';
 import { AuthService } from '../../application/services/authService';
 import { SequelizeUserRepository } from '../../infrastructure/repositories/SequelizeUserRepository';
+import { SequelizeCompanyEmployeeRepository } from '../../infrastructure/repositories/SequelizeCompanyEmployeeRepository';
+import { SequelizeCompanyRepository } from '../../infrastructure/repositories/SequelizeCompanyRepository';
+import { SequelizeAddressRepository } from '../../infrastructure/repositories/SequelizeAddressRepository';
+import { SequelizeEmailVerificationRepository } from '../../infrastructure/repositories/SequelizeEmailVerificationRepository';
 import { GoogleAuthProvider } from '../../infrastructure/providers/GoogleAuthProvider';
 import { requireAuth } from '../middlewares/authMiddleware';
 
@@ -18,12 +22,29 @@ const authLimiter = rateLimit({
 // Instanciar dependencias (DI manual)
 const userRepository = new SequelizeUserRepository();
 const googleAuthProvider = new GoogleAuthProvider();
-const authService = new AuthService(userRepository, googleAuthProvider);
+const companyEmployeeRepository = new SequelizeCompanyEmployeeRepository();
+const companyRepository = new SequelizeCompanyRepository();
+const addressRepository = new SequelizeAddressRepository();
+const emailVerificationRepository = new SequelizeEmailVerificationRepository();
+
+const authService = new AuthService(
+    userRepository,
+    googleAuthProvider,
+    companyEmployeeRepository,
+    companyRepository,
+    addressRepository,
+    undefined, // emailService (usa default)
+    emailVerificationRepository
+);
 const authController = new AuthController(authService);
 
 // Definir rutas con rate limiting
 router.post('/login', authLimiter, (req, res, next) => authController.login(req, res, next));
 router.post('/google', authLimiter, (req, res, next) => authController.googleLogin(req, res, next));
+router.post('/send-otp', authLimiter, (req, res, next) => authController.sendOtp(req, res, next));
+router.post('/register', authLimiter, (req, res, next) => authController.register(req, res, next));
+router.post('/verify-otp', authLimiter, (req, res, next) => authController.verifyOtp(req, res, next));
+router.post('/resend-otp', authLimiter, (req, res, next) => authController.resendOtp(req, res, next));
 router.get('/me', requireAuth, (req, res, next) => authController.getMe(req, res, next));
 router.post('/logout', authLimiter, (req, res, next) => authController.logout(req, res, next));
 
