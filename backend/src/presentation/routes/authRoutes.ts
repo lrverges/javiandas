@@ -7,6 +7,7 @@ import { SequelizeCompanyEmployeeRepository } from '../../infrastructure/reposit
 import { SequelizeCompanyRepository } from '../../infrastructure/repositories/SequelizeCompanyRepository';
 import { SequelizeAddressRepository } from '../../infrastructure/repositories/SequelizeAddressRepository';
 import { SequelizeEmailVerificationRepository } from '../../infrastructure/repositories/SequelizeEmailVerificationRepository';
+import { SequelizeCompanyAdminRepository } from '../../infrastructure/repositories/SequelizeCompanyAdminRepository';
 import { GoogleAuthProvider } from '../../infrastructure/providers/GoogleAuthProvider';
 import { requireAuth } from '../middlewares/authMiddleware';
 
@@ -26,6 +27,7 @@ const companyEmployeeRepository = new SequelizeCompanyEmployeeRepository();
 const companyRepository = new SequelizeCompanyRepository();
 const addressRepository = new SequelizeAddressRepository();
 const emailVerificationRepository = new SequelizeEmailVerificationRepository();
+const companyAdminRepository = new SequelizeCompanyAdminRepository();
 
 const authService = new AuthService(
     userRepository,
@@ -34,7 +36,8 @@ const authService = new AuthService(
     companyRepository,
     addressRepository,
     undefined, // emailService (usa default)
-    emailVerificationRepository
+    emailVerificationRepository,
+    companyAdminRepository
 );
 const authController = new AuthController(authService);
 

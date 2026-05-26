@@ -1,7 +1,7 @@
 import { CompanyEmployee } from '../models/CompanyEmployee';
 
 export interface ICompanyEmployeeRepository {
-    create(employee: CompanyEmployee): Promise<CompanyEmployee>;
+    create(employee: CompanyEmployee, options?: { transaction?: any }): Promise<CompanyEmployee>;
     batchCreate(employees: CompanyEmployee[]): Promise<CompanyEmployee[]>;
     remove(companyId: number, employeeId: number): Promise<boolean>;
     findByCompanyId(companyId: number): Promise<CompanyEmployee[]>;

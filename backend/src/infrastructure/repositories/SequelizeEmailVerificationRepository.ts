@@ -1,5 +1,5 @@
-import { IEmailVerificationRepository } from '../../../domain/repositories/IEmailVerificationRepository';
-import { EmailVerification } from '../../../domain/models/EmailVerification';
+import { IEmailVerificationRepository } from '../../domain/repositories/IEmailVerificationRepository';
+import { EmailVerification } from '../../domain/models/EmailVerification';
 import { EmailVerificationModel } from '../database/models/EmailVerificationModel';
 
 export class SequelizeEmailVerificationRepository implements IEmailVerificationRepository {

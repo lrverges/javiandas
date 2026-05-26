@@ -1,16 +1,17 @@
+import { Op } from 'sequelize';
 import { CompanyEmployee } from '../../domain/models/CompanyEmployee';
 import { ICompanyEmployeeRepository } from '../../domain/repositories/ICompanyEmployeeRepository';
 import { CompanyEmployeeModel } from '../database/models/CompanyEmployeeModel';
 import { sequelize } from '../database/sequelize';
 
 export class SequelizeCompanyEmployeeRepository implements ICompanyEmployeeRepository {
-    async create(employee: CompanyEmployee): Promise<CompanyEmployee> {
+    async create(employee: CompanyEmployee, options?: { transaction?: any }): Promise<CompanyEmployee> {
         const created = await CompanyEmployeeModel.create({
             companyId: employee.companyId,
             email: employee.email,
             userId: employee.userId,
             status: employee.status,
-        });
+        }, options);
         return this.mapToDomain(created);
     }
 
@@ -44,7 +45,7 @@ export class SequelizeCompanyEmployeeRepository implements ICompanyEmployeeRepos
 
     async findByCompanyId(companyId: number): Promise<CompanyEmployee[]> {
         const found = await CompanyEmployeeModel.findAll({
-            where: { companyId },
+            where: { companyId, status: { [Op.ne]: 'inactive' } },
             order: [['createdAt', 'DESC']],
         });
         return found.map(item => this.mapToDomain(item));
@@ -52,7 +53,7 @@ export class SequelizeCompanyEmployeeRepository implements ICompanyEmployeeRepos
 
     async findByEmail(email: string): Promise<CompanyEmployee | null> {
         const found = await CompanyEmployeeModel.findOne({
-            where: { email }
+            where: { email, status: { [Op.ne]: 'inactive' } }
         });
         if (!found) return null;
         return this.mapToDomain(found);
@@ -77,7 +78,7 @@ export class SequelizeCompanyEmployeeRepository implements ICompanyEmployeeRepos
             companyId: model.companyId,
             email: model.email,
             userId: model.userId,
-            status: model.status as 'pending' | 'registered',
+            status: model.status as 'pending' | 'registered' | 'inactive',
             createdAt: model.createdAt,
             updatedAt: model.updatedAt,
         });

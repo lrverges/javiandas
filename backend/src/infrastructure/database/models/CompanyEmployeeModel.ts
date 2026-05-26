@@ -6,7 +6,7 @@ export class CompanyEmployeeModel extends Model {
     declare companyId: number;
     declare email: string;
     declare userId: number | null;
-    declare status: 'pending' | 'registered';
+    declare status: 'pending' | 'registered' | 'inactive';
 }
 
 CompanyEmployeeModel.init({
@@ -22,7 +22,6 @@ CompanyEmployeeModel.init({
     email: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true,
     },
     userId: {
         type: DataTypes.INTEGER,

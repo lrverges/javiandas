@@ -3,7 +3,7 @@ export class CompanyEmployee {
     companyId: number;
     email: string;
     userId?: number | null;
-    status: 'pending' | 'registered';
+    status: 'pending' | 'registered' | 'inactive';
     createdAt?: Date;
     updatedAt?: Date;
 
@@ -12,7 +12,7 @@ export class CompanyEmployee {
         companyId: number;
         email: string;
         userId?: number | null;
-        status?: 'pending' | 'registered';
+        status?: 'pending' | 'registered' | 'inactive';
         createdAt?: Date;
         updatedAt?: Date;
     }) {

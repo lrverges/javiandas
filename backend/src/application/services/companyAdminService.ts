@@ -2,6 +2,7 @@ import { CompanyAdmin } from '../../domain/models/CompanyAdmin';
 import { ICompanyAdminRepository } from '../../domain/repositories/ICompanyAdminRepository';
 import { IUserRepository } from '../../domain/repositories/IUserRepository';
 import { ICompanyRepository } from '../../domain/repositories/ICompanyRepository';
+import { ICompanyEmployeeRepository } from '../../domain/repositories/ICompanyEmployeeRepository';
 import { AppError } from '../../presentation/middlewares/errorHandler';
 import { sequelize } from '../../infrastructure/database/sequelize';
 
@@ -9,7 +10,8 @@ export class CompanyAdminService {
     constructor(
         private companyAdminRepository: ICompanyAdminRepository,
         private userRepository: IUserRepository,
-        private companyRepository: ICompanyRepository
+        private companyRepository: ICompanyRepository,
+        private companyEmployeeRepository?: ICompanyEmployeeRepository
     ) {}
 
     async assignAdmin(companyId: number, email: string): Promise<CompanyAdmin> {
@@ -23,6 +25,23 @@ export class CompanyAdminService {
         const existingAssignment = await this.companyAdminRepository.findByEmail(companyId, email);
         if (existingAssignment) {
             throw new AppError('Este email ya es administrador de esta empresa', 409);
+        }
+
+        // Verificar si está asignado a otra empresa en company_admins
+        const anyAdmin = await this.companyAdminRepository.findAnyByEmail(email);
+        if (anyAdmin && anyAdmin.companyId !== companyId) {
+            throw new AppError('Este email ya está asignado a otra empresa', 409);
+        }
+
+        // Verificar si está asignado a otra empresa en company_employees, o si no es empleado
+        if (this.companyEmployeeRepository) {
+            const anyEmployee = await this.companyEmployeeRepository.findByEmail(email);
+            if (anyEmployee && anyEmployee.companyId !== companyId) {
+                throw new AppError('Este email ya está asignado a otra empresa', 409);
+            }
+            if (!anyEmployee) {
+                throw new AppError('Para asignar un administrador, el correo debe estar agregado como empleado de esta empresa primero', 400);
+            }
         }
 
         // Verificar si el usuario ya está registrado en el sistema
@@ -75,18 +94,17 @@ export class CompanyAdminService {
 
         const tx = await sequelize.transaction();
         try {
-            // Remover asociación
-            const removed = await this.companyAdminRepository.remove(companyId, adminId, { transaction: tx });
-            if (!removed) {
+            // Remover asociación lógicamente (inactivar)
+            const updated = await this.companyAdminRepository.update(adminId, { status: 'inactive' }, { transaction: tx });
+            if (!updated) {
                 await tx.rollback();
                 return false;
             }
 
-            // Si tenía una cuenta de usuario, revertimos su rol a 'user' y desvinculamos su empresa
+            // Si tenía una cuenta de usuario, revertimos su rol a 'user' (pero conserva su companyId porque sigue siendo empleado)
             if (adminToRemove.userId) {
                 await this.userRepository.update(adminToRemove.userId, {
-                    role: 'user',
-                    companyId: null
+                    role: 'user'
                 }, { transaction: tx });
             }
 

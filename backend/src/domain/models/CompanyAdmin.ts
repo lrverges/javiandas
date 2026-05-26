@@ -3,7 +3,7 @@ export class CompanyAdmin {
     companyId: number;
     userId?: number | null;
     email: string;
-    status: 'active' | 'pending';
+    status: 'active' | 'pending' | 'inactive';
     createdAt?: Date;
     updatedAt?: Date;
 
@@ -12,7 +12,7 @@ export class CompanyAdmin {
         companyId: number;
         userId?: number | null;
         email: string;
-        status?: 'active' | 'pending';
+        status?: 'active' | 'pending' | 'inactive';
         createdAt?: Date;
         updatedAt?: Date;
     }) {

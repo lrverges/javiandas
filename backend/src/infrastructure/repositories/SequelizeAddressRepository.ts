@@ -64,4 +64,27 @@ export class SequelizeAddressRepository implements IAddressRepository {
             isDefault: found.isDefault,
         });
     }
+
+    async delete(id: number, options?: { transaction?: any }): Promise<boolean> {
+        const deletedRows = await AddressModel.destroy({ where: { id } }, options);
+        return deletedRows > 0;
+    }
+
+    async clearDefaultByUserId(userId: number, options?: { transaction?: any }): Promise<void> {
+        await AddressModel.update({ isDefault: false }, { where: { userId } }, options);
+    }
+
+    async findById(id: number, options?: { transaction?: any }): Promise<Address | null> {
+        const addr = await AddressModel.findByPk(id, options);
+        if (!addr) return null;
+        return new Address({
+            id: addr.id,
+            userId: addr.userId,
+            street: addr.street,
+            number: addr.number,
+            locality: addr.locality,
+            reference: addr.reference || undefined,
+            isDefault: addr.isDefault,
+        });
+    }
 }

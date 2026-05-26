@@ -338,7 +338,12 @@ export default function AdminCompanyDetail() {
                                                     {admin.status === 'active' ? 'Activo' : 'Pendiente'}
                                                 </span>
                                             </div>
-                                            <button onClick={() => handleRemoveAdmin(admin.id)} className="btn-danger-link">
+                                            <button 
+                                                onClick={() => handleRemoveAdmin(admin.id)} 
+                                                className="btn-danger-link"
+                                                disabled={admin.email === user?.email}
+                                                title={admin.email === user?.email ? 'No puedes removerte a ti mismo de la empresa' : ''}
+                                            >
                                                 Remover
                                             </button>
                                         </li>
@@ -409,8 +414,8 @@ export default function AdminCompanyDetail() {
                                             <button 
                                                 onClick={() => handleRemoveEmployee(emp.id)} 
                                                 className="btn-danger-link"
-                                                disabled={emp.status === 'registered'}
-                                                title={emp.status === 'registered' ? 'No se puede eliminar un empleado registrado en el sistema' : ''}
+                                                disabled={emp.email === user?.email}
+                                                title={emp.email === user?.email ? 'No puedes darte de baja a ti mismo de la empresa' : ''}
                                             >
                                                 Remover
                                             </button>

@@ -5,12 +5,22 @@ import { ICompanyEmployeeRepository } from '../../domain/repositories/ICompanyEm
 import { ICompanyRepository } from '../../domain/repositories/ICompanyRepository';
 import { IAddressRepository } from '../../domain/repositories/IAddressRepository';
 import { IEmailVerificationRepository } from '../../domain/repositories/IEmailVerificationRepository';
+import { ICompanyAdminRepository } from '../../domain/repositories/ICompanyAdminRepository';
 import { User } from '../../domain/models/User';
+import { Address } from '../../domain/models/Address';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 jest.mock('bcrypt');
 jest.mock('jsonwebtoken');
+jest.mock('../../infrastructure/database/sequelize', () => ({
+    sequelize: {
+        transaction: jest.fn().mockResolvedValue({
+            commit: jest.fn(),
+            rollback: jest.fn()
+        })
+    }
+}));
 
 describe('AuthService', () => {
     let authService: AuthService;
@@ -20,6 +30,7 @@ describe('AuthService', () => {
     let mockCompanyRepository: jest.Mocked<ICompanyRepository>;
     let mockAddressRepository: jest.Mocked<IAddressRepository>;
     let mockEmailVerificationRepository: jest.Mocked<IEmailVerificationRepository>;
+    let mockCompanyAdminRepository: jest.Mocked<ICompanyAdminRepository>;
 
     beforeEach(() => {
         mockUserRepository = {
@@ -52,12 +63,23 @@ describe('AuthService', () => {
             findByUserId: jest.fn(),
             findDefaultByUserId: jest.fn(),
             update: jest.fn(),
+            delete: jest.fn(),
+            clearDefaultByUserId: jest.fn(),
+            findById: jest.fn(),
         } as any;
         mockEmailVerificationRepository = {
             upsert: jest.fn(),
             findByEmail: jest.fn(),
             deleteByEmail: jest.fn()
         };
+        mockCompanyAdminRepository = {
+            assign: jest.fn(),
+            remove: jest.fn(),
+            findByCompanyId: jest.fn(),
+            findByEmail: jest.fn(),
+            findAnyPendingByEmail: jest.fn(),
+            update: jest.fn(),
+        } as any;
         
         process.env.JWT_SECRET = 'test-secret';
         authService = new AuthService(
@@ -67,7 +89,8 @@ describe('AuthService', () => {
             mockCompanyRepository,
             mockAddressRepository,
             { sendOTP: jest.fn() } as any, // mock email service
-            mockEmailVerificationRepository
+            mockEmailVerificationRepository,
+            mockCompanyAdminRepository
         );
     });
 
@@ -146,6 +169,162 @@ describe('AuthService', () => {
                     isVerified: true
                 },
             });
+        });
+
+        it('should register new user and link company address when new user logs in via Google and is B2B employee', async () => {
+            mockGoogleProvider.verifyIdToken.mockResolvedValue({ email: 'employee@acme.com', name: 'Google Employee' });
+            mockUserRepository.findByEmail.mockResolvedValue(null);
+            mockCompanyEmployeeRepository.findByEmail.mockResolvedValue({
+                id: 1,
+                companyId: 10,
+                email: 'employee@acme.com',
+                status: 'pending'
+            } as any);
+            mockCompanyRepository.findById.mockResolvedValue({
+                id: 10,
+                name: 'Acme Corp',
+                street: 'Calle Principal',
+                addressNumber: '123',
+                locality: 'Lules',
+                isActive: true
+            } as any);
+
+            const mockCreatedUser = new User({
+                id: 3,
+                email: 'employee@acme.com',
+                name: 'Google Employee',
+                isVerified: true,
+                companyId: 10
+            });
+            mockUserRepository.create.mockResolvedValue(mockCreatedUser);
+            (jwt.sign as jest.Mock).mockReturnValue('google_mock_token');
+
+            const result = await authService.loginWithGoogle('valid_id_token');
+
+            expect(result?.user.companyId).toBe(10);
+            expect(mockCompanyEmployeeRepository.update).toHaveBeenCalledWith(1, {
+                status: 'registered',
+                userId: 3
+            }, expect.any(Object));
+            expect(mockAddressRepository.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    userId: 3,
+                    street: 'Calle Principal',
+                    number: '123',
+                    locality: 'Lules',
+                    isDefault: true
+                }),
+                expect.any(Object)
+            );
+        });
+
+        it('should register new user and link company address when new user logs in via Google and is pending B2B admin', async () => {
+            mockGoogleProvider.verifyIdToken.mockResolvedValue({ email: 'admin@acme.com', name: 'Google Admin' });
+            mockUserRepository.findByEmail.mockResolvedValue(null);
+            mockCompanyEmployeeRepository.findByEmail.mockResolvedValue(null);
+            mockCompanyAdminRepository.findAnyPendingByEmail.mockResolvedValue({
+                id: 1,
+                companyId: 10,
+                email: 'admin@acme.com',
+                status: 'pending'
+            } as any);
+            mockCompanyRepository.findById.mockResolvedValue({
+                id: 10,
+                name: 'Acme Corp',
+                street: 'Calle Principal',
+                addressNumber: '123',
+                locality: 'Lules',
+                isActive: true
+            } as any);
+
+            const mockCreatedUser = new User({
+                id: 4,
+                email: 'admin@acme.com',
+                name: 'Google Admin',
+                isVerified: true,
+                companyId: 10,
+                role: 'admin_empresa'
+            });
+            mockUserRepository.create.mockResolvedValue(mockCreatedUser);
+            (jwt.sign as jest.Mock).mockReturnValue('google_mock_token');
+
+            const result = await authService.loginWithGoogle('valid_id_token');
+
+            expect(result?.user.companyId).toBe(10);
+            expect(result?.user.role).toBe('admin_empresa');
+            expect(mockCompanyAdminRepository.update).toHaveBeenCalledWith(1, {
+                status: 'active',
+                userId: 4
+            }, expect.any(Object));
+            expect(mockAddressRepository.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    userId: 4,
+                    street: 'Calle Principal',
+                    number: '123',
+                    locality: 'Lules',
+                    isDefault: true
+                }),
+                expect.any(Object)
+            );
+        });
+
+        it('should update both employee and admin statuses and assign admin role when user is both a pending employee and pending admin', async () => {
+            mockGoogleProvider.verifyIdToken.mockResolvedValue({ email: 'both@acme.com', name: 'Google Both' });
+            mockUserRepository.findByEmail.mockResolvedValue(null);
+            mockCompanyEmployeeRepository.findByEmail.mockResolvedValue({
+                id: 11,
+                companyId: 10,
+                email: 'both@acme.com',
+                status: 'pending'
+            } as any);
+            mockCompanyAdminRepository.findAnyPendingByEmail.mockResolvedValue({
+                id: 12,
+                companyId: 10,
+                email: 'both@acme.com',
+                status: 'pending'
+            } as any);
+            mockCompanyRepository.findById.mockResolvedValue({
+                id: 10,
+                name: 'Acme Corp',
+                street: 'Calle Principal',
+                addressNumber: '123',
+                locality: 'Lules',
+                isActive: true
+            } as any);
+
+            const mockCreatedUser = new User({
+                id: 5,
+                email: 'both@acme.com',
+                name: 'Google Both',
+                isVerified: true,
+                companyId: 10,
+                role: 'admin_empresa'
+            });
+            mockUserRepository.create.mockResolvedValue(mockCreatedUser);
+            (jwt.sign as jest.Mock).mockReturnValue('google_mock_token');
+
+            const result = await authService.loginWithGoogle('valid_id_token');
+
+            expect(result?.user.companyId).toBe(10);
+            expect(result?.user.role).toBe('admin_empresa');
+            expect(mockCompanyEmployeeRepository.update).toHaveBeenCalledWith(11, {
+                status: 'registered',
+                userId: 5
+            }, expect.any(Object));
+            expect(mockCompanyAdminRepository.update).toHaveBeenCalledWith(12, {
+                status: 'active',
+                userId: 5
+            }, expect.any(Object));
+            expect(mockAddressRepository.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    userId: 5,
+                    street: 'Calle Principal',
+                    number: '123',
+                    locality: 'Lules',
+                    isDefault: true
+                }),
+                expect.any(Object)
+            );
         });
     });
 

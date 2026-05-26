@@ -7,6 +7,7 @@ import Dashboard from './components/Dashboard/Dashboard';
 import AdminCompanyList from './components/Admin/AdminCompanyList';
 import AdminCompanyDetail from './components/Admin/AdminCompanyDetail';
 import MainLayout from './components/Layout/MainLayout';
+import AddressManager from './components/AddressManager/AddressManager';
 import './App.css';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -71,6 +72,7 @@ function App() {
           {/* Rutas Protegidas envueltas en MainLayout */}
           <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/addresses" element={<AddressManager />} />
             <Route 
               path="/admin/companies" 
               element={

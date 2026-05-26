@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import authRoutes from './presentation/routes/authRoutes';
 import adminRoutes from './presentation/routes/adminRoutes';
+import addressRoutes from './presentation/routes/addressRoutes';
 import { sequelize } from './infrastructure/database/sequelize';
 import { errorHandler } from './presentation/middlewares/errorHandler';
 import { Logger } from './infrastructure/logging/logger';
@@ -35,6 +36,7 @@ app.use(cookieParser());
 // Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/users/me/addresses', addressRoutes);
 
 app.get('/', (req, res) => {
     res.send('API de Viandas Saludables funcionando 🥗');

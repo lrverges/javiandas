@@ -67,4 +67,22 @@ export class SequelizeUserRepository implements IUserRepository {
             isVerified: found.isVerified
         });
     }
+
+    async findById(id: number, options?: { transaction?: any }): Promise<User | null> {
+        const found = await UserModel.findByPk(id, options);
+        if (!found) return null;
+        return new User({
+            id: found.id,
+            email: found.email,
+            name: found.name,
+            password: found.password || undefined,
+            role: found.role,
+            companyId: found.companyId,
+            firstName: found.firstName,
+            lastName: found.lastName,
+            phone: found.phone,
+            dni: found.dni,
+            isVerified: found.isVerified,
+        });
+    }
 }

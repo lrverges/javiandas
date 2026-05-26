@@ -12,6 +12,7 @@ async function seed() {
     const existing = await UserModel.findOne({ where: { email: 'guest@guest.com' } });
     if (existing) {
         existing.password = hashedPassword;
+        existing.isVerified = true;
         await existing.save();
         Logger.info('🎉 Usuario de prueba guest@guest.com actualizado con éxito.');
         return;
@@ -21,6 +22,7 @@ async function seed() {
         email: 'guest@guest.com',
         name: 'Guest User',
         password: hashedPassword,
+        isVerified: true,
     });
     Logger.info('🎉 Usuario de prueba guest@guest.com creado con éxito.');
 }

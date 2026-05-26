@@ -7,6 +7,7 @@ import { SequelizeCompanyRepository } from '../../infrastructure/repositories/Se
 import { SequelizeCompanyAdminRepository } from '../../infrastructure/repositories/SequelizeCompanyAdminRepository';
 import { SequelizeCompanyEmployeeRepository } from '../../infrastructure/repositories/SequelizeCompanyEmployeeRepository';
 import { SequelizeUserRepository } from '../../infrastructure/repositories/SequelizeUserRepository';
+import { SequelizeAddressRepository } from '../../infrastructure/repositories/SequelizeAddressRepository';
 import { requireAuth } from '../middlewares/authMiddleware';
 import { requireRole, requireCompanyAccess } from '../middlewares/requireRole';
 import rateLimit from 'express-rate-limit';
@@ -31,10 +32,11 @@ const companyRepo = new SequelizeCompanyRepository();
 const companyAdminRepo = new SequelizeCompanyAdminRepository();
 const companyEmployeeRepo = new SequelizeCompanyEmployeeRepository();
 const userRepo = new SequelizeUserRepository();
+const addressRepo = new SequelizeAddressRepository();
 
 const companyService = new CompanyService(companyRepo);
-const companyAdminService = new CompanyAdminService(companyAdminRepo, userRepo, companyRepo);
-const companyEmployeeService = new CompanyEmployeeService(companyEmployeeRepo, companyRepo);
+const companyAdminService = new CompanyAdminService(companyAdminRepo, userRepo, companyRepo, companyEmployeeRepo);
+const companyEmployeeService = new CompanyEmployeeService(companyEmployeeRepo, companyRepo, companyAdminRepo, userRepo, addressRepo);
 
 const controller = new CompanyController(companyService, companyAdminService, companyEmployeeService);
 

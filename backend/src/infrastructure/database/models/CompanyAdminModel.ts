@@ -6,7 +6,7 @@ export class CompanyAdminModel extends Model {
     declare companyId: number;
     declare userId: number | null;
     declare email: string;
-    declare status: 'active' | 'pending';
+    declare status: 'active' | 'pending' | 'inactive';
 }
 
 CompanyAdminModel.init({
@@ -38,7 +38,6 @@ CompanyAdminModel.init({
     timestamps: true,
     indexes: [
         {
-            unique: true,
             fields: ['companyId', 'email']
         }
     ]

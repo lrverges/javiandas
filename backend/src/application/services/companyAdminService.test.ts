@@ -2,6 +2,7 @@ import { CompanyAdminService } from './companyAdminService';
 import { ICompanyAdminRepository } from '../../domain/repositories/ICompanyAdminRepository';
 import { IUserRepository } from '../../domain/repositories/IUserRepository';
 import { ICompanyRepository } from '../../domain/repositories/ICompanyRepository';
+import { ICompanyEmployeeRepository } from '../../domain/repositories/ICompanyEmployeeRepository';
 import { Company } from '../../domain/models/Company';
 import { CompanyAdmin } from '../../domain/models/CompanyAdmin';
 import { User } from '../../domain/models/User';
@@ -21,6 +22,7 @@ describe('CompanyAdminService', () => {
     let mockAdminRepo: jest.Mocked<ICompanyAdminRepository>;
     let mockUserRepo: jest.Mocked<IUserRepository>;
     let mockCompanyRepo: jest.Mocked<ICompanyRepository>;
+    let mockEmployeeRepo: jest.Mocked<ICompanyEmployeeRepository>;
 
     beforeEach(() => {
         mockAdminRepo = {
@@ -28,6 +30,9 @@ describe('CompanyAdminService', () => {
             remove: jest.fn(),
             findByCompanyId: jest.fn(),
             findByEmail: jest.fn(),
+            findAnyPendingByEmail: jest.fn(),
+            findAnyByEmail: jest.fn(),
+            update: jest.fn(),
         } as any;
 
         mockUserRepo = {
@@ -44,7 +49,17 @@ describe('CompanyAdminService', () => {
             findByCuit: jest.fn(),
         } as any;
 
-        companyAdminService = new CompanyAdminService(mockAdminRepo, mockUserRepo, mockCompanyRepo);
+        mockEmployeeRepo = {
+            create: jest.fn(),
+            batchCreate: jest.fn(),
+            remove: jest.fn(),
+            findByCompanyId: jest.fn(),
+            findByEmail: jest.fn(),
+            findById: jest.fn(),
+            update: jest.fn(),
+        } as any;
+
+        companyAdminService = new CompanyAdminService(mockAdminRepo, mockUserRepo, mockCompanyRepo, mockEmployeeRepo);
     });
 
     describe('assignAdmin', () => {
@@ -58,6 +73,7 @@ describe('CompanyAdminService', () => {
             mockCompanyRepo.findById.mockResolvedValue(mockCompany);
             mockAdminRepo.findByEmail.mockResolvedValue(null);
             mockUserRepo.findByEmail.mockResolvedValue(mockUser);
+            mockEmployeeRepo.findByEmail.mockResolvedValue({ id: 8, companyId: 1, email: 'admin@acme.com' } as any);
             
             const expectedAdmin = new CompanyAdmin({ companyId: 1, userId: 10, email: 'admin@acme.com', status: 'active' });
             mockAdminRepo.assign.mockResolvedValue(expectedAdmin);
@@ -78,6 +94,7 @@ describe('CompanyAdminService', () => {
             mockCompanyRepo.findById.mockResolvedValue(mockCompany);
             mockAdminRepo.findByEmail.mockResolvedValue(null);
             mockUserRepo.findByEmail.mockResolvedValue(null); // not registered
+            mockEmployeeRepo.findByEmail.mockResolvedValue({ id: 8, companyId: 1, email: 'pending@acme.com' } as any);
 
             const expectedAdmin = new CompanyAdmin({ companyId: 1, userId: null, email: 'pending@acme.com', status: 'pending' });
             mockAdminRepo.assign.mockResolvedValue(expectedAdmin);
@@ -110,6 +127,37 @@ describe('CompanyAdminService', () => {
                 new AppError('Empresa no encontrada', 404)
             );
         });
+
+        it('should throw 409 AppError if email already assigned as admin to a different company', async () => {
+            const mockCompany = new Company({
+                id: 1, name: 'ACME', cuit: '30-12345678-9', street: 'San Martin',
+                addressNumber: '123', locality: 'Lules', benefitType: 'Corporativo', allowExtraAddresses: false
+            });
+
+            mockCompanyRepo.findById.mockResolvedValue(mockCompany);
+            mockAdminRepo.findByEmail.mockResolvedValue(null);
+            mockAdminRepo.findAnyByEmail.mockResolvedValue(new CompanyAdmin({ companyId: 2, email: 'admin@acme.com' }));
+
+            await expect(companyAdminService.assignAdmin(1, 'admin@acme.com')).rejects.toThrow(
+                new AppError('Este email ya está asignado a otra empresa', 409)
+            );
+        });
+
+        it('should throw 409 AppError if email already assigned as employee to a different company', async () => {
+            const mockCompany = new Company({
+                id: 1, name: 'ACME', cuit: '30-12345678-9', street: 'San Martin',
+                addressNumber: '123', locality: 'Lules', benefitType: 'Corporativo', allowExtraAddresses: false
+            });
+
+            mockCompanyRepo.findById.mockResolvedValue(mockCompany);
+            mockAdminRepo.findByEmail.mockResolvedValue(null);
+            mockAdminRepo.findAnyByEmail.mockResolvedValue(null);
+            mockEmployeeRepo.findByEmail.mockResolvedValue({ id: 8, companyId: 2, email: 'employee@acme.com' } as any);
+
+            await expect(companyAdminService.assignAdmin(1, 'employee@acme.com')).rejects.toThrow(
+                new AppError('Este email ya está asignado a otra empresa', 409)
+            );
+        });
     });
 
     describe('removeAdmin', () => {
@@ -118,13 +166,13 @@ describe('CompanyAdminService', () => {
                 new CompanyAdmin({ id: 5, companyId: 1, userId: 10, email: 'admin@acme.com', status: 'active' })
             ];
             mockAdminRepo.findByCompanyId.mockResolvedValue(existingAdmins);
-            mockAdminRepo.remove.mockResolvedValue(true);
+            mockAdminRepo.update.mockResolvedValue(new CompanyAdmin({ ...existingAdmins[0], status: 'inactive' }));
 
             const result = await companyAdminService.removeAdmin(1, 5);
 
             expect(result).toBe(true);
-            expect(mockAdminRepo.remove).toHaveBeenCalledWith(1, 5, expect.any(Object));
-            expect(mockUserRepo.update).toHaveBeenCalledWith(10, { role: 'user', companyId: null }, expect.any(Object));
+            expect(mockAdminRepo.update).toHaveBeenCalledWith(5, { status: 'inactive' }, expect.any(Object));
+            expect(mockUserRepo.update).toHaveBeenCalledWith(10, { role: 'user' }, expect.any(Object));
         });
 
         it('should throw 404 AppError if admin not found in company', async () => {

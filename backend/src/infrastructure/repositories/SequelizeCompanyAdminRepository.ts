@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { CompanyAdmin } from '../../domain/models/CompanyAdmin';
 import { ICompanyAdminRepository } from '../../domain/repositories/ICompanyAdminRepository';
 import { CompanyAdminModel } from '../database/models/CompanyAdminModel';
@@ -23,7 +24,7 @@ export class SequelizeCompanyAdminRepository implements ICompanyAdminRepository 
 
     async findByCompanyId(companyId: number): Promise<CompanyAdmin[]> {
         const found = await CompanyAdminModel.findAll({
-            where: { companyId },
+            where: { companyId, status: { [Op.ne]: 'inactive' } },
             order: [['createdAt', 'ASC']],
         });
         return found.map(item => this.mapToDomain(item));
@@ -31,9 +32,32 @@ export class SequelizeCompanyAdminRepository implements ICompanyAdminRepository 
 
     async findByEmail(companyId: number, email: string): Promise<CompanyAdmin | null> {
         const found = await CompanyAdminModel.findOne({
-            where: { companyId, email }
+            where: { companyId, email, status: { [Op.ne]: 'inactive' } }
         });
         if (!found) return null;
+        return this.mapToDomain(found);
+    }
+
+    async findAnyPendingByEmail(email: string): Promise<CompanyAdmin | null> {
+        const found = await CompanyAdminModel.findOne({
+            where: { email, status: 'pending' }
+        });
+        if (!found) return null;
+        return this.mapToDomain(found);
+    }
+
+    async findAnyByEmail(email: string): Promise<CompanyAdmin | null> {
+        const found = await CompanyAdminModel.findOne({
+            where: { email, status: { [Op.ne]: 'inactive' } }
+        });
+        if (!found) return null;
+        return this.mapToDomain(found);
+    }
+
+    async update(id: number, admin: Partial<CompanyAdmin>, options?: { transaction?: any }): Promise<CompanyAdmin | null> {
+        const found = await CompanyAdminModel.findByPk(id, options);
+        if (!found) return null;
+        await found.update(admin, options);
         return this.mapToDomain(found);
     }
 
@@ -43,7 +67,7 @@ export class SequelizeCompanyAdminRepository implements ICompanyAdminRepository 
             companyId: model.companyId,
             userId: model.userId,
             email: model.email,
-            status: model.status as 'active' | 'pending',
+            status: model.status as 'active' | 'pending' | 'inactive',
             createdAt: model.createdAt,
             updatedAt: model.updatedAt,
         });

@@ -5,6 +5,7 @@ import { IGoogleAuthProvider } from '../../domain/providers/IGoogleAuthProvider'
 import { ICompanyEmployeeRepository } from '../../domain/repositories/ICompanyEmployeeRepository';
 import { ICompanyRepository } from '../../domain/repositories/ICompanyRepository';
 import { IAddressRepository } from '../../domain/repositories/IAddressRepository';
+import { ICompanyAdminRepository } from '../../domain/repositories/ICompanyAdminRepository';
 import { User } from '../../domain/models/User';
 import { Address } from '../../domain/models/Address';
 import { EmailVerification } from '../../domain/models/EmailVerification';
@@ -23,7 +24,8 @@ export class AuthService {
         private companyRepository: ICompanyRepository,
         private addressRepository: IAddressRepository,
         private emailService: IEmailService = new NodemailerEmailService(),
-        private emailVerificationRepository?: IEmailVerificationRepository
+        private emailVerificationRepository?: IEmailVerificationRepository,
+        private companyAdminRepository?: ICompanyAdminRepository
     ) {}
 
     private generateToken(user: User): string {
@@ -95,6 +97,8 @@ export class AuthService {
             let finalCompanyId: number | null = null;
             let companyAddress: { street: string; addressNumber: string; locality: string } | null = null;
             let allowExtra = false;
+            let isCompanyAdmin = false;
+            let adminRecord: any = null;
 
             if (employee && employee.status === 'pending') {
                 const company = await this.companyRepository.findById(employee.companyId);
@@ -116,8 +120,35 @@ export class AuthService {
                     }
                 }
             }
+            if (this.companyAdminRepository) {
+                adminRecord = await this.companyAdminRepository.findAnyPendingByEmail(userData.email);
+                if (adminRecord) {
+                    const company = await this.companyRepository.findById(adminRecord.companyId);
+                    if (company && company.isActive) {
+                        finalCompanyId = company.id!;
+                        isCompanyAdmin = true;
+                        
+                        const hasValidAddress = Boolean(company.street && company.addressNumber && company.locality);
+                        
+                        if (hasValidAddress) {
+                            allowExtra = company.allowExtraAddresses;
+                            companyAddress = {
+                                street: company.street,
+                                addressNumber: company.addressNumber,
+                                locality: company.locality
+                            };
+                        } else {
+                            allowExtra = true;
+                            companyAddress = null;
+                        }
+                    }
+                }
+            }
 
             userData.companyId = finalCompanyId;
+            if (isCompanyAdmin) {
+                userData.role = 'admin_empresa';
+            }
             userData.isVerified = true; // El usuario nace verificado en este nuevo flujo
 
             const createdUser = await this.userRepository.create(userData, { transaction: tx });
@@ -125,6 +156,12 @@ export class AuthService {
             if (employee && finalCompanyId) {
                 await this.companyEmployeeRepository.update(employee.id!, {
                     status: 'registered',
+                    userId: createdUser.id
+                }, { transaction: tx });
+            }
+            if (isCompanyAdmin && adminRecord && finalCompanyId && this.companyAdminRepository) {
+                await this.companyAdminRepository.update(adminRecord.id!, {
+                    status: 'active',
                     userId: createdUser.id
                 }, { transaction: tx });
             }
@@ -314,7 +351,85 @@ export class AuthService {
 
             let user = await this.userRepository.findByEmail(email);
             if (!user) {
-                user = await this.userRepository.create(new User({ email, name, isVerified: true }));
+                const tx = await sequelize.transaction();
+                try {
+                    const employee = await this.companyEmployeeRepository.findByEmail(email);
+                    let finalCompanyId: number | null = null;
+                    let companyAddress: { street: string; addressNumber: string; locality: string } | null = null;
+                    let isCompanyAdmin = false;
+                    let adminRecord: any = null;
+
+                    if (employee && employee.status === 'pending') {
+                        const company = await this.companyRepository.findById(employee.companyId);
+                        if (company && company.isActive) {
+                            finalCompanyId = company.id!;
+                            const hasValidAddress = Boolean(company.street && company.addressNumber && company.locality);
+                            if (hasValidAddress) {
+                                companyAddress = {
+                                    street: company.street,
+                                    addressNumber: company.addressNumber,
+                                    locality: company.locality
+                                };
+                            }
+                        }
+                    }
+                    if (this.companyAdminRepository) {
+                        adminRecord = await this.companyAdminRepository.findAnyPendingByEmail(email);
+                        if (adminRecord) {
+                            const company = await this.companyRepository.findById(adminRecord.companyId);
+                            if (company && company.isActive) {
+                                finalCompanyId = company.id!;
+                                isCompanyAdmin = true;
+                                const hasValidAddress = Boolean(company.street && company.addressNumber && company.locality);
+                                if (hasValidAddress) {
+                                    companyAddress = {
+                                        street: company.street,
+                                        addressNumber: company.addressNumber,
+                                        locality: company.locality
+                                    };
+                                }
+                            }
+                        }
+                    }
+
+                    user = await this.userRepository.create(new User({
+                        email,
+                        name,
+                        isVerified: true,
+                        companyId: finalCompanyId,
+                        role: isCompanyAdmin ? 'admin_empresa' : 'user'
+                    }), { transaction: tx });
+
+                    if (employee && finalCompanyId) {
+                        await this.companyEmployeeRepository.update(employee.id!, {
+                            status: 'registered',
+                            userId: user.id
+                        }, { transaction: tx });
+                    }
+                    if (isCompanyAdmin && adminRecord && finalCompanyId && this.companyAdminRepository) {
+                        await this.companyAdminRepository.update(adminRecord.id!, {
+                            status: 'active',
+                            userId: user.id
+                        }, { transaction: tx });
+                    }
+
+                    if (finalCompanyId && companyAddress) {
+                        const defaultAddress = new Address({
+                            userId: user.id!,
+                            street: companyAddress.street,
+                            number: companyAddress.addressNumber,
+                            locality: companyAddress.locality,
+                            reference: 'Dirección Corporativa',
+                            isDefault: true
+                        });
+                        await this.addressRepository.create(defaultAddress, { transaction: tx });
+                    }
+
+                    await tx.commit();
+                } catch (err) {
+                    await tx.rollback();
+                    throw err;
+                }
             } else if (!user.isVerified) {
                 // Si el usuario existía pero no estaba verificado, Google Auth lo verifica.
                 await this.userRepository.update(user.id!, { isVerified: true, password: null });
